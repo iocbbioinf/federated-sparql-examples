@@ -1,0 +1,24 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:008 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How to retrieve the labels of Aspirin (CID 2244) in English and Spanish from Wikidata?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX compound: <http://rdf.ncbi.nlm.nih.gov/pubchem/compound/>
+
+SELECT ?wdent ?label
+WHERE {
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+    compound:CID2244 rdfs:seeAlso ?wdent .
+  }
+
+  SERVICE <https://query.wikidata.org/sparql> {
+    ?wdent rdfs:label ?label .
+    FILTER (LANG(?label) = "en" || LANG(?label) = "es")
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/> .

@@ -1,0 +1,47 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:005 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Retrieve the list of diseases involving human enzymes that metabolize cholesterol or cholesterol derivatives and the number of proteins involved"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX endpoint: <https://idsm.elixir-czech.cz/sparql/endpoint/>
+PREFIX up:<http://purl.uniprot.org/core/>
+PREFIX rh:<http://rdf.rhea-db.org/>
+PREFIX ch:<http://purl.obolibrary.org/obo/>
+PREFIX taxon:<http://purl.uniprot.org/taxonomy/>
+PREFIX keywords:<http://purl.uniprot.org/keywords/>
+PREFIX disease: <http://purl.uniprot.org/core/disease/>
+PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?DISEASE ?DISEASE_NAME (count(distinct ?PROTEIN) as ?HUMAN_PROTEIN_COUNT) WHERE {
+  SERVICE endpoint:chebi {
+    ?CHEBI sachem:substructureSearch [
+          sachem:query "C1C2(C3(CCC4(C(C3(CC=C2CC(C1)O))(CCC4(C(C)CCCC(C)C)))C))C" ].
+    }
+
+  ?RHEA_REACTION rdfs:subClassOf rh:Reaction.
+  ?RHEA_REACTION rh:status rh:Approved.
+  ?RHEA_REACTION rh:side / rh:contains / rh:compound / rh:chebi ?CHEBI .
+
+  # UniProt endpoint service
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    # Rhea reactions catalyzed by UniProt proteins
+    ?PROTEIN up:annotation/up:catalyticActivity/up:catalyzedReaction ?RHEA_REACTION .
+
+    # UniProtKB/Swiss-Prot entries
+    ?PROTEIN up:reviewed true .
+    # Human entries
+    ?PROTEIN up:organism taxon:9606 .
+    # disease
+    ?PROTEIN up:annotation/up:disease ?DISEASE .
+    ?DISEASE skos:prefLabel ?DISEASE_NAME .
+  }
+}
+GROUP BY ?DISEASE ?DISEASE_NAME
+ORDER BY DESC(count(distinct ?PROTEIN))""" ;
+    schema:target <https://sparql.rhea-db.org/sparql> .

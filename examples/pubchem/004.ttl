@@ -1,0 +1,28 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:004 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How can I retrieve the WURCS sequence from Glycosmos for the glycan structure (SID 252275760) in PubChem?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX substance: <http://rdf.ncbi.nlm.nih.gov/pubchem/substance/>
+PREFIX glycan: <http://purl.jp/bio/12/glyco/glycan#>
+
+SELECT DISTINCT ?gtcid ?wurcs
+WHERE {
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/substance> {
+    substance:SID252275760 rdfs:seeAlso ?glycan .
+  }
+
+  SERVICE <https://ts.glycosmos.org/sparql> {
+    ?glycan dcterms:identifier ?gtcid ;
+            glycan:has_glycosequence ?gs .
+    ?gs glycan:in_carbohydrate_format glycan:carbohydrate_format_wurcs ;
+        glycan:has_sequence ?wurcs .
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/> .

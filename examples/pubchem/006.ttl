@@ -1,0 +1,48 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:006 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which PDB structures with a resolution better than 2 Å that include Aspirin (CID 2244) and have associated bioactivity data in PubChem?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX compound: <http://rdf.ncbi.nlm.nih.gov/pubchem/compound/>
+PREFIX pdbo: <http://rdf.wwpdb.org/schema/pdbx-v40.owl#>
+PREFIX cheminf: <http://semanticscience.org/resource/>
+PREFIX bao: <http://www.bioassayontology.org/bao#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX sio: <http://semanticscience.org/resource/>
+
+SELECT ?structure ?resolution
+WHERE {
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/substance> {
+    ?substance cheminf:CHEMINF_000477 compound:CID2244 ;
+               pdbo:link_to_pdb ?structure .
+  }
+
+  SERVICE <https://sparql.uniprot.org/sparql/> {
+    ?structure a up:Structure_Resource ;
+               up:database <http://purl.uniprot.org/database/PDB> ;
+               up:resolution ?resolution .
+    FILTER (?resolution < 2)
+
+    ?uniprot a up:Protein ;
+             rdfs:seeAlso ?structure .
+  }
+
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/protein> {
+    ?protein a sio:SIO_010043 ;
+             rdfs:seeAlso ?uniprot .
+  }
+
+  FILTER EXISTS {
+    GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/measuregroup> {
+      ?measuregroup a bao:BAO_0000040 ;
+                    obo:RO_0000057 ?protein .
+    }
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/> .

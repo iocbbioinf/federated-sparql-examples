@@ -1,0 +1,37 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:005 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which PubChem pathways include the genes associated with Keshan disease (DOID:0050083), as identified by Glycosmos?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX glycan: <http://purl.jp/bio/12/glyco/glycan#>
+PREFIX bp3: <http://www.biopax.org/release/biopax-level3.owl#>
+PREFIX sio: <http://semanticscience.org/resource/>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+
+SELECT DISTINCT ?pathway ?title
+WHERE {
+  SERVICE <https://ts.glycosmos.org/sparql> {
+    VALUES ?disease { <http://glycosmos.org/disease/DOID:0050083> }
+
+    ?disease a glycan:Disease ;
+             sio:SIO_000255 [ sio:SIO_000001 ?glycogene ] .
+  }
+
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/gene> {
+    ?gene a sio:SIO_010035 ;
+          rdfs:seeAlso ?glycogene .
+  }
+
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/pathway> {
+    ?pathway a bp3:Pathway ;
+             obo:RO_0000057 ?gene ;
+             dcterms:title ?title .
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/> .

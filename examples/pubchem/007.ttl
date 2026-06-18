@@ -1,0 +1,34 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:007 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How can I retrieve all compounds involved in PDB structures with a resolution better than 2 Å for the protein Basic phospholipase A2 VRV-PL-VIIIa (UniProt ID: P59071)?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX pdbo: <http://rdf.wwpdb.org/schema/pdbx-v40.owl#>
+PREFIX cheminf: <http://semanticscience.org/resource/>
+
+SELECT ?compound
+WHERE {
+  SERVICE <https://sparql.uniprot.org/sparql/> {
+    VALUES ?uniprot { <http://purl.uniprot.org/uniprot/P59071> }
+
+    ?uniprot a up:Protein ;
+             rdfs:seeAlso ?pdb .
+
+    ?pdb a up:Structure_Resource ;
+         up:database <http://purl.uniprot.org/database/PDB> ;
+         up:resolution ?resolution .
+    FILTER (?resolution < 2)
+  }
+
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/substance> {
+    ?substance cheminf:CHEMINF_000477 ?compound ;
+               pdbo:link_to_pdb ?pdb .
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/> .

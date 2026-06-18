@@ -1,0 +1,29 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:003 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How can I retrieve all compounds involved in the given Rhea reaction (RHEA:10020)?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rh: <http://rdf.rhea-db.org/>
+
+SELECT DISTINCT ?compound
+WHERE {
+  SERVICE <https://sparql.rhea-db.org/sparql> {
+    VALUES ?rhea { rh:10020 }
+
+    ?rhea rdfs:subClassOf rh:Reaction .
+    ?rhea rh:equation ?equation .
+    ?rhea rh:side/rh:contains/rh:compound ?cmpd .
+
+    ?cmpd (rh:chebi|(rh:reactivePart/rh:chebi)|(rh:underlyingChebi/rh:chebi)) ?chebi .
+  }
+
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+    ?compound a ?chebi .
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/> .
