@@ -1,0 +1,87 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:005 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which taxa produce sesterterpenes?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sachem:  <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX endpoint:<https://idsm.elixir-czech.cz/sparql/endpoint/>
+PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+
+SELECT DISTINCT ?wd ?taxonName ?smiles ?compoundLabel WHERE {
+  VALUES ?smiles {
+    "C=C(CC/C=C(C)CC/C=C(C)CCC=C(C)C)[C@@H]1CC=C(C)CC1"
+    "C=C(CC/C=C(C)CC/C=C(C)CCC=C(C)C)[C@H]1CC=C(C)CC1"
+    "C=CC(=C)CC/C=C(C)CC/C=C(C)CC/C=C(C)CCC=C(C)C"
+    "CC(C)=CC/C=C(C)[C@H]1C/C=C(C)CC/C=C(C)CC/C=C(C)CC1"
+    "CC(C)=CCC/C(C)=C/CC/C(C)=C/CC[C@]1(C)[C@H]2CC=C(C)[C@@H]1C2"
+    "CC(C)=CCCC1(C)CCC2(C)C/C=C(C)CC/C=C(C)C/C=C/2C1"
+    "CC1CCC2[C@]3(C)CCC4C(C)(C)CCC[C@]4(C)C3CC[C@]2(C)C1C"
+    "[H]C1C[C@@]2([H])[C@H](C(=C)C)CC[C@]2(C)C/C=C(/C)CC/C=C(/C)CC/C=C1C"
+    "[H][C@@]12/C=C/C(=C)CCC/C(C)=C/CC/C(C)=C/C[C@@]1(C)CC[C@@H]2C(C)C"
+    "[H][C@@]12/C=CC(C)=C/CC/C(C)=CCCC(=C)CC[C@@]1(C)CC[C@@H]2C(C)C"
+    "[H][C@@]12C/C=C(/C)[C@@]3([H])CCC(=C)C3CC/C(C)=CC[C@@]1(C)CC[C@@H]2C(C)C"
+    "[H][C@@]12CC/C(C)=C/CC/C(C)=C/CC/C(C)=C/C[C@@]1(C)CC[C@@H]2C(=C)C"
+    "[H][C@@]12CC/C(C)=C/CC/C(C)=C/CC/C(C)=C/C[C@@]1(C)CC[C@H]2C(=C)C"
+    "[H][C@@]12CC/C(C)=C/CC/C(C)=C/C[C@@]1(C)CC[C@]1([H])[C@@H](C(=C)C)CC[C@@]21C"
+    "[H][C@@]12CC/C(C)=C/CCC(=C)[C@@]1([H])C[C@@]2(C)CC/C=C(C)CCC=C(C)C"
+    "[H][C@@]12CC/C(C)=CCC/C(C)=CCCC(=C)/C=C[C@@]1(C)CC[C@@H]2C(C)C"
+    "[H][C@@]12CC/C(C)=CCC/C(C)=CCCC(=C)/C=C[C@@]1(C)CC[C@H]2C(C)C"
+    "[H][C@@]12CC/C(C)=CC[C@@]3(C)CC[C@H](C(C)C)[C@]3([H])C/C=C(/C)[C@]1([H])CCC2=C"
+    "[H][C@@]12CC3=C(C)[C@@]45CC[C@@H](C)[C@]4([H])CC[C@@]5(C)[C@@]3([H])C[C@@]1(C)CC[C@]2([H])C(C)C"
+    "[H][C@@]12CCC(=C)[C@]1(C)[C@@]1([H])C[C@@]3(C)CC[C@]4(C)CC[C@H](C(C)C)[C@@]4([H])[C@]3([H])[C@@]1([H])C2"
+    "[H][C@@]12CC[C@@H](C)/C1=C/C/C(C)=C/C[C@]1(C)CC[C@@H](C(C)C)[C@@]1([H])C/C=C/2C"
+    "[H][C@@]12CC[C@H](C)/C1=C/C/C(C)=CC[C@@]1(C)CC[C@H](C(C)C)[C@]1([H])C/C=C2C"
+    "[H][C@@]12CC[C@H](C)[C@@]13CC[C@H](C)C3=C[C@@]1(C)CC[C@](C)(CCC=C(C)C)[C@@]21[H]"
+    "[H][C@@]12CC[C@H](C)[C@@]13CC[C@H](C)[C@@]1([H])C[C@@]4(C)CC[C@H](C(C)C)[C@]4([H])C[C@]1(O)[C@@]23C"
+    "[H][C@@]12CC[C@H](C)[C@@]13CC[C@H](C)[C@@]1([H])C[C@@]4(C)CC[C@H](C(C)C)[C@]4([H])C[C@]1(O)[C@@]23CO"
+    "[H][C@@]12CC[C@H](C)[C@@]3([H])CC[C@H](C)[C@@]3([H])C[C@@]1(C)CC[C@]2([H])[C@@H](C)CCCC(C)C"
+    "[H][C@@]12CC[C@H]([C@H](C)CCC(O)C(C)(C)O)[C@@]1(C)CCC/C2=CC=C1C[C@H](O)CCC1=C"
+    "[H][C@@]12CC[C@]([H])([C@H](C)CCCC(C)(O)CO)[C@@]1(C)CC/C(=C/C=C1/C[C@@H](O)CCC1=C)C2"
+    "[H][C@@]12C[C@@]3(C)C(=CC14C(C)C21CC[C@H](C)[C@]1([H])CC[C@@H]4C)CC[C@@H]3C(C)C"
+    "[H][C@@]12C[C@@]3(C)C(=CC[C@@H]3C(C)C)CC13C(C)C21CC[C@H](C)[C@]1([H])CC[C@@H]3C"
+    "[H][C@@]12C[C@@]3([H])[C@@H](C(C)C)CC[C@]3(C)C/C1=C(C)CC[C@]1([H])/C(=C2C)CC[C@@H]1C"
+    "[H][C@@]12C[C@]3([H])/C(C)=C/CC/C(C)=C/CCC(=C)[C@@]3([H])C[C@@]1(C)CC[C@@H]2C(C)C"
+    "[H][C@@]12C[C@]3([H])/C(C)=C4/CC[C@@H](C)[C@]4([H])C/C=C(/C)[C@@]3([H])C[C@@]1(C)CC[C@@H]2C(C)C"
+    "[H][C@@]12[C@@H](C(C)C)CC[C@@]1(C)CC[C@]1(C)C=C3[C@]([H])(C[C@]4(C)CCC[C@]34C)[C@@]21[H]"
+    "[H][C@]12/C=C(/C)C3=CC[C@@H](C)[C@@]3([H])CC[C@]1(C)CC[C@@]1(C)CC[C@H](C(C)C)[C@@]12[H]"
+    "[H][C@]12C/C=C(C)/C=C/C/C(C)=C/CC/C(C)=C/C[C@]1(C)CC[C@H]2C(C)C"
+    "[H][C@]12CC/C(C)=C3/C[C@@]4(C)CC[C@H](C(C)C)[C@]4([H])C/C3=C(C)[C@]1([H])CC[C@]2([H])C"
+    "[H][C@]12CC/C(C)=CC[C@@]3(C)CC[C@H](C(C)C)[C@]3([H])/C=CC(C)=C/1CC[C@H]2C"
+    "[H][C@]12CC/C(C)=CC[C@@]3(C)CC[C@H](C(C)C)[C@]3([H])C/C=C(/C)C1=CC[C@H]2C"
+    "[H][C@]12CCC(C)=C1CC/C(C)=CC[C@@]1(C)CC[C@H](C(C)C)[C@]1([H])C/C=C2C"
+    "[H][C@]12CC[C@@H](C)[C@]13CCC(=C)[C@]1([H])C[C@]4(C)CC[C@@H](C(C)C)[C@@]4([H])C[C@@]1([H])[C@]23C"
+    "[H][C@]12CC[C@@H](C)[C@]13CC[C@@H](C)C1=C(C[C@]4([H])[C@H](C(C)C)CC[C@@]4(C)C1)[C@]23C"
+    "[H][C@]12CC[C@@H](C)[C@]13CC[C@@H](C)[C@]1([H])C[C@]4(C)CC[C@@H](C(C)C)[C@@]4([H])C[C@]21C3=C"
+    "[H][C@]12CC[C@@]1(C)[C@]1([H])CC[C@H](C)[C@]1([H])[C@@]2([H])C(=C)CC/C=C(C)CCC=C(C)C"
+    "[H][C@]12C[C@@]1([H])[C@]1(C)[C@@]3([H])C[C@@]4(C)CC[C@]5(C)CC[C@H](C(C)C)[C@@]5([H])[C@]4([H])[C@@]3([H])C[C@]21C"
+    "[H][C@]12C[C@@]3(C)C(=CC[C@@H]3C)[C@@]1([H])C[C@@]1(C)CC[C@]3(C)CC[C@H](C(C)C)[C@@]3([H])[C@@]12[H]"
+    "[H][C@]12C[C@@]3(C)CCC(C(C)C)=C3CC1[C@]1(CC[C@@H]2C)C(C)=CCC[C@@H]1C"
+    "[H][C@]12C[C@@]3(C)CC[C@H](C(C)C)C3=CC1[C@]1(CC[C@@H]2C)C(C)=CCC[C@@H]1C"
+    "[H][C@]12C[C@@]3(C)CC[C@H](C(C)C)[C@]3([H])C=C1[C@]1(CC[C@@H]2C)C(C)=CCC[C@@H]1C"
+    "[H][C@]12C[C@@]3(C)CC[C@]4(C)CC[C@H](C(C)C)[C@@]4([H])[C@]3([H])[C@@]1([H])C[C@]1(C)C(C)=CC[C@]21[H]"
+    "[H][C@]12C[C@@]3([H])C(=CCC3(C)C)[C@@]1([H])C[C@@]1(C)CC[C@]3(C)CC[C@H](C(C)C)[C@@]3([H])[C@@]12[H]"
+    "[H][C@]12C[C@](C)(C/C=C3[C@](C)(CC[C@]4(C)CC[C@H](C(=C)C)[C@@]34[H])C1)CC[C@@H]2C"
+    "[H][C@]12C[C@]3(C)CC=C[C@]3(C)[C@@]1([H])C[C@@]1(C)CC[C@]3(C)CC[C@H](C(C)C)[C@@]3([H])[C@@]12[H]"
+    "[H][C@]12C[C@]3(C)CCC[C@@]1(C[C@@]1(C)CC[C@]4(C)CC[C@H](C(C)C)[C@@]4([H])[C@@]12[H])C3=C"
+    "[H][C@]12C[C@]3(C)CC[C@@H](C3=C)[C@@]1([H])C[C@@]1(C)CC[C@]3(C)CC[C@H](C(C)C)[C@@]3([H])[C@@]12[H]"
+    "[H][C@]12C[C@]3([H])[C@H](C(C)C)CC[C@@]3(C)CC1=C(C)[C@]1(C)CC[C@@]3([H])[C@H](C)CC[C@@]213"
+    "[H][C@]12[C@@H](C)CC[C@@]1([H])C1(C)CC[C@]([H])(C(=C)CC/C=C(C)CCC=C(C)C)[C@@]12[H]"
+  }
+  SERVICE endpoint:wikidata {
+    ?wd sachem:substructureSearch [
+          sachem:query      ?smiles ;
+          sachem:searchMode sachem:exactSearch ] .
+  }
+  SERVICE <https://query.wikidata.org/sparql> {
+    ?wd    wdt:P703  ?taxon .
+    ?taxon rdfs:label ?taxonName .
+    FILTER(LANG(?taxonName) = "en")
+    OPTIONAL { ?wd rdfs:label ?compoundLabel . FILTER(LANG(?compoundLabel) = "en") }
+  }
+}""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

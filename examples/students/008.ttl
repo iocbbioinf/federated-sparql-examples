@@ -1,0 +1,32 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:008 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which molecules are structurally similar to aspirin, and what are their Wikidata labels?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?compound ?score ?label WHERE {
+
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+    [ sachem:compound ?compound ; sachem:score ?score ]
+        sachem:similaritySearch [
+          sachem:query  "CC(=O)OC1=CC=CC=C1C(=O)O" ;
+          sachem:cutoff "0.85"^^xsd:double ] .
+    GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+      ?compound rdfs:seeAlso ?wdid .
+    }
+    FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
+  }
+
+  SERVICE <https://query.wikidata.org/sparql> {
+    ?wdid rdfs:label ?label .
+    FILTER(LANG(?label) = "en")
+  }
+}""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

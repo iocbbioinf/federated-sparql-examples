@@ -1,0 +1,47 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:011 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which biological pathways contain compounds at least 0.7 similar to germacrene, and how many such compounds does each contain?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX obo:     <http://purl.obolibrary.org/obo/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX chemrof: <https://w3id.org/chemrof/>
+PREFIX sachem:  <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX endpoint:<https://idsm.elixir-czech.cz/sparql/endpoint/>
+PREFIX pubchem: <http://rdf.ncbi.nlm.nih.gov/pubchem/>
+PREFIX bp:     <http://www.biopax.org/release/biopax-level3.owl#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX dc:      <http://purl.org/dc/elements/1.1/>
+PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+
+
+SELECT ?wpid ?title (MAX(?score) AS ?bestScore) (COUNT(DISTINCT ?compound) AS ?nCompounds) WHERE {
+    obo:CHEBI_36515 chemrof:smiles_string ?smiles .
+    [ sachem:compound ?compound ; sachem:score ?score ]
+        sachem:similaritySearch [
+          sachem:query  ?smiles ;
+          sachem:cutoff "0.7"^^xsd:double ] .
+  
+   GRAPH pubchem:pathway {
+      ?pathway a bp:Pathway .
+      ?pathway rdfs:seeAlso ?wp .
+      ?pathway  obo:RO_0000057 ?compound .
+      FILTER (CONTAINS(STR(?wp), 'wikipathways'))
+    }
+  BIND(IRI(REPLACE(STR(?wp),
+        'http://identifiers.org/wikipathways:',
+        'https://identifiers.org/wikipathways/')) AS ?wpIri)
+
+  SERVICE <https://sparql.wikipathways.org/sparql> {
+    ?pw dc:identifier  ?wpIri ;
+        dcterms:identifier ?wpid ;
+        dc:title       ?title .
+  }
+}
+GROUP BY ?wpid ?title
+ORDER BY DESC(?bestScore)""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

@@ -1,0 +1,34 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:001 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which proteins in UniProtKB/Swiss-Prot have magnesium(2+) as a cofactor?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX obo:     <http://purl.obolibrary.org/obo/>
+PREFIX chemrof: <https://w3id.org/chemrof/>
+PREFIX rh: <http://rdf.rhea-db.org/>
+
+SELECT ?chebi ?protein WHERE {
+  
+  ?chebi oboInOwl:hasRelatedSynonym ?o .
+  ?chebi chemrof:smiles_string ?smiles
+  FILTER(LCASE(STR(?o)) = "magnesium(2+)")
+  
+     SERVICE <https://sparql.uniprot.org/sparql> {
+    SELECT ?protein WHERE {
+      ?protein up:annotation ?ann ;
+               up:reviewed   true .              
+      ?ann a up:Cofactor_Annotation ;
+           up:cofactor ?chebi .         
+    } LIMIT 100
+  }
+ }""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

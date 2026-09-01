@@ -1,0 +1,41 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:010 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "What names does a compound (farnesyl triphosphate) have across Wikidata and ChEBI/IDSM?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+prefix compound: <http://rdf.ncbi.nlm.nih.gov/pubchem/compound/>
+prefix obo: <http://purl.obolibrary.org/obo/>
+prefix sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+prefix chemrof: <https://w3id.org/chemrof/>
+
+
+SELECT ?source ?value WHERE {
+  {
+    obo:CHEBI_17961 chemrof:smiles_string ?smiles .
+    ?match sachem:substructureSearch [
+             sachem:query      ?smiles ;
+             sachem:searchMode sachem:exactSearch ] .
+	?match rdfs:seeAlso ?wdid .
+    SERVICE <https://query.wikidata.org/sparql> {
+      ?wdid rdfs:label ?value .
+      FILTER(LANG(?value) = "en")
+    }
+    BIND("wikidata" AS ?source)
+  }
+  UNION
+  {
+     obo:CHEBI_17961 chemrof:smiles_string ?smiles .
+    ?match sachem:substructureSearch [
+             sachem:query      ?smiles ;
+             sachem:searchMode sachem:exactSearch ] .
+    ?match (rdfs:label | oboInOwl:hasRelatedSynonym) ?value .
+    BIND("idsm" AS ?source)
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

@@ -1,0 +1,32 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:007 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How do sesterterpenes in ChEBI/IDSM map to Wikidata items, with their English labels?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX chemrof: <https://w3id.org/chemrof/>
+PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+
+SELECT DISTINCT ?compound ?wdid ?label WHERE {
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+    ?compound rdfs:subClassOf obo:CHEBI_35192 ;
+              chemrof:smiles_string ?smiles .
+    ?match sachem:substructureSearch [
+             sachem:query      ?smiles ;
+             sachem:searchMode sachem:exactSearch ] .
+    GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+      ?match rdfs:seeAlso ?wdid .
+    }
+    FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
+  }
+  SERVICE <https://query.wikidata.org/sparql> {
+    ?wdid rdfs:label ?label .
+    FILTER(LANG(?label) = "en")
+  }
+}""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

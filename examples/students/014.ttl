@@ -1,0 +1,44 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:014 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How are molecules similar to aspirin distributed across molecular-mass bands?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs:     <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sachem:   <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX wdt:      <http://www.wikidata.org/prop/direct/>
+
+SELECT ?massBand
+       (COUNT(DISTINCT ?compound)         AS ?nCompounds)
+       (ROUND(AVG(?cScore) * 1000) / 1000 AS ?avgSimilarity)
+       (MIN(?cMass)                       AS ?minMass)
+       (MAX(?cMass)                       AS ?maxMass)
+WHERE {
+  {
+    SELECT ?compound (SAMPLE(?score) AS ?cScore) (AVG(?mass) AS ?cMass) WHERE {
+      SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+        [ sachem:compound ?compound ; sachem:score ?score ]
+            sachem:similaritySearch [
+              sachem:query  "CC(=O)OC1=CC=CC=C1C(=O)O" ;
+              sachem:cutoff "0.85"^^xsd:double ] .
+        GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+          ?compound rdfs:seeAlso ?wdid .
+        }
+        FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
+      }
+      SERVICE <https://query.wikidata.org/sparql> {
+        ?wdid wdt:P2067 ?mass .
+      }
+    }
+    GROUP BY ?compound
+  }
+  BIND(xsd:integer(FLOOR(?cMass / 25)) * 25                  AS ?bandLow)
+  BIND(CONCAT(STR(?bandLow), "-", STR(?bandLow + 25), " Da") AS ?massBand)
+}
+GROUP BY ?massBand ?bandLow
+ORDER BY ?bandLow""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

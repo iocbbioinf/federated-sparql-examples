@@ -1,0 +1,33 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:006 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which sesterterpenes have no DrugBank record?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX obo:     <http://purl.obolibrary.org/obo/>
+PREFIX sachem:  <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX chemrof: <https://w3id.org/chemrof/>
+PREFIX endpoint:<https://idsm.elixir-czech.cz/sparql/endpoint/>
+
+SELECT ?compound ?smiles WHERE {
+  
+  ?compound rdfs:subClassOf* obo:CHEBI_35192 ;
+            chemrof:smiles_string ?smiles .
+
+  MINUS {
+    SELECT ?smiles WHERE {
+      ?compounds_drugs rdfs:subClassOf* obo:CHEBI_35192 ;
+          chemrof:smiles_string ?smiles .
+      SERVICE endpoint:drugbank {
+        ?drug sachem:substructureSearch [
+                sachem:query      ?smiles ;
+                sachem:searchMode sachem:exactSearch ] .
+      }
+    }
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

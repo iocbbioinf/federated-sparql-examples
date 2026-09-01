@@ -1,0 +1,32 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:002 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which Rhea reactions involve any germacrene compound?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX obo:     <http://purl.obolibrary.org/obo/>
+PREFIX chemrof: <https://w3id.org/chemrof/>
+PREFIX rh: <http://rdf.rhea-db.org/>
+
+SELECT DISTINCT ?rhea ?chebi WHERE {
+  
+  ?chebi oboInOwl:hasRelatedSynonym ?o .
+  ?chebi chemrof:smiles_string ?smiles
+  FILTER(CONTAINS(LCASE(STR(?o)), "germacrene"))
+          
+  SERVICE <https://sparql.rhea-db.org/sparql> {
+    ?rhea rdfs:subClassOf rh:Reaction .
+    ?rhea rh:side/rh:contains/rh:compound ?compound .
+
+    ?compound (rh:chebi|(rh:reactivePart/rh:chebi)|(rh:underlyingChebi/rh:chebi)) ?chebi .
+    
+  }  
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

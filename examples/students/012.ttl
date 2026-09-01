@@ -1,0 +1,41 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:012 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which chosen terpene substrates take part in at least three Rhea reactions, and in which reactions?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX obo:  <http://purl.obolibrary.org/obo/>
+PREFIX rh:   <http://rdf.rhea-db.org/>
+
+SELECT ?chebi (SAMPLE(?name) AS ?label)
+       (COUNT(DISTINCT ?rhea) AS ?reactionCount)
+       (GROUP_CONCAT(DISTINCT ?rheaId; SEPARATOR=", ") AS ?reactions)
+WHERE {
+  VALUES ?chebi {
+    obo:CHEBI_16584  
+    obo:CHEBI_128769   
+    obo:CHEBI_17211  
+    obo:CHEBI_15831    
+    obo:CHEBI_16057  
+    obo:CHEBI_57623    
+    obo:CHEBI_175763 
+    obo:CHEBI_58756 
+    obo:CHEBI_23375
+  }
+  ?chebi rdfs:label ?name .
+
+  SERVICE <https://sparql.rhea-db.org/sparql> {
+    ?rhea rdfs:subClassOf rh:Reaction ;
+          rh:side/rh:contains/rh:compound ?compound .
+    ?compound (rh:chebi|rh:reactivePart/rh:chebi|rh:underlyingChebi/rh:chebi) ?chebi .
+    BIND(STRAFTER(STR(?rhea), "http://rdf.rhea-db.org/") AS ?rheaId)
+  }
+}
+GROUP BY ?chebi
+HAVING (COUNT(DISTINCT ?rhea) >= 3)
+ORDER BY DESC(?reactionCount)""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

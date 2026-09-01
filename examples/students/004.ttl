@@ -1,0 +1,40 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:004 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which chemical compounds with a recorded discovery date are the oldest, among those that have a measured mass spectrum?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX sio: <http://semanticscience.org/resource/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+prefix wdt: <http://www.wikidata.org/prop/direct/>
+prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?smiles (MIN(?year) AS ?firstYear) (SAMPLE(?name) AS ?aName) (SAMPLE(?spectrum) AS ?aSpectrum) WHERE {
+  SERVICE <https://query.wikidata.org/sparql> {
+  SELECT ?name ?year ?ikey ?smiles WHERE {
+      ?c wdt:P575 ?date .
+      BIND(YEAR(?date) AS ?year)
+      ?c wdt:P235  ?ikey .
+      ?c wdt:P233 ?smiles .
+      ?c rdfs:label ?name . FILTER(LANG(?name) = "en")
+    }
+  }
+  
+  ?compound sachem:substructureSearch [
+      sachem:query ?smiles;
+      sachem:searchMode sachem:exactSearch ].
+  
+   ?experiment sio:SIO_000230 ?compound. 
+  ?experiment sio:SIO_000229 ?spectrum. 
+  ?spectrum sio:SIO_000300 ?msvalue. 
+  
+}
+GROUP BY ?smiles
+ORDER BY ?firstYear
+LIMIT 10""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .
