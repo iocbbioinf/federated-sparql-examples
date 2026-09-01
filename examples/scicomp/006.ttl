@@ -1,0 +1,84 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:006 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which compounds annotated in an active Melochia umbellata extract have reported activity against Trypanosoma cruzi, and in which taxa are they reported?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sio: <http://semanticscience.org/resource/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX vocab: <http://rdf.ncbi.nlm.nih.gov/pubchem/vocabulary#>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT
+       ?inchikey
+       ?pubchemCompound
+       ?wdCompound
+       ?taxon
+       ?taxonLabel
+WHERE {
+
+  # Wikidata: in which taxa is each compound reported to occur (P703).
+  # The remote pattern is bounded by an explicit VALUES list of the three
+  # compounds' Wikidata items (resolved from the same InChIKeys via P235).
+  # An unrestricted "?wdCompound wdt:P703 ?taxon" spans ~2.9 million
+  # statements: too large to materialise, and Wikidata then rejects the
+  # SERVICE pattern. Keep this list in step with the InChIKeys below.
+  SERVICE <https://query.wikidata.org/sparql> {
+    SELECT ?wdCompound ?taxon ?taxonLabel WHERE {
+      VALUES ?wdCompound {
+        <http://www.wikidata.org/entity/Q425300>   # benznidazole
+        <http://www.wikidata.org/entity/Q411582>   # nifurtimox
+        <http://www.wikidata.org/entity/Q409478>   # quercetin
+      }
+      ?wdCompound wdt:P703 ?taxon .
+      OPTIONAL {
+        ?taxon rdfs:label ?taxonLabel .
+        FILTER(LANG(?taxonLabel) = "en")
+      }
+    }
+  }
+
+  # Input: structures annotated in the active extract, given as InChIKeys.
+  # Substitute the InChIKeys of your own annotated features here.
+  VALUES ?inchikey {
+    "CULUWZNBISUWAS-UHFFFAOYSA-N"   # benznidazole (CID 31593, ChEMBL110)
+    "ARFHIAQFJWUCFH-IZZDOVSWSA-N"   # nifurtimox   (CID 6842999)
+    "REFJWTPEDVJJIY-UHFFFAOYSA-N"   # quercetin    (CID 5280343)
+  }
+
+  # PubChem: InChIKey -> compound -> Wikidata concept.
+  # The InChIKey node carries the string on sio:SIO_000300 and points at its
+  # compound with sio:SIO_000011; the Wikidata link is a plain rdfs:seeAlso.
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/inchikey> {
+    ?ik a vocab:InChIKey ;
+        sio:SIO_000300 ?inchikey ;
+        sio:SIO_000011 ?pubchemCompound .
+  }
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+    ?pubchemCompound rdfs:seeAlso ?wdCompound .
+    FILTER(STRSTARTS(STR(?wdCompound), "http://www.wikidata.org/entity/"))
+  }
+
+  # ChEMBL: the same structure as a ChEMBL molecule, with a reported activity
+  # measured against a Trypanosoma cruzi target.
+  # NOTE the direction: the link is asserted FROM the ChEMBL molecule TO the
+  # PubChem compound (?mol skos:exactMatch ?compound). PubChem substances carry
+  # no skos:exactMatch to ChEMBL, so the reverse pattern returns nothing.
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+    ?chemblCompound skos:exactMatch ?pubchemCompound .
+
+    ?activity a cco:Activity ;
+        cco:hasMolecule ?chemblCompound ;
+        cco:hasAssay ?assay .
+
+    ?assay cco:hasTarget ?target .
+    ?target cco:organismName "Trypanosoma cruzi" .
+  }
+
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

@@ -1,0 +1,54 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:003 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "For a given compound (here loratadine, ChEMBL998), give its interaction profile with targets."@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX chembl_molecule: <http://rdf.ebi.ac.uk/resource/chembl/molecule/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX up: <http://purl.uniprot.org/core/>
+
+SELECT DISTINCT
+       ?protein
+       ?proteinName
+       ?activityType
+       ?value
+       ?unit
+       ?assayType
+WHERE {
+
+  {
+    SELECT DISTINCT ?protein ?activityType ?value ?unit ?assayType
+    WHERE {
+      ?activity a cco:Activity ;
+          cco:hasMolecule chembl_molecule:CHEMBL998 ;
+          cco:hasAssay ?assay ;
+          cco:standardType ?activityType ;
+          cco:standardValue ?value ;
+          cco:standardUnits ?unit .
+
+      ?assay cco:assayType ?assayType ;
+             cco:hasTarget ?target .
+
+      ?target
+          cco:hasTargetComponent/
+          cco:targetCmptXref ?protein .
+
+      FILTER(STRSTARTS(STR(?protein), "http://purl.uniprot.org/uniprot/"))
+    }
+  }
+
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    SELECT ?protein ?proteinName WHERE {
+      ?protein a up:Protein ;
+               up:reviewed true ;
+               up:recommendedName/up:fullName ?proteinName .
+    }
+  }
+}
+ORDER BY ?value""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

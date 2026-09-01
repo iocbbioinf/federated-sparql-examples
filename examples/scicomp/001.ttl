@@ -1,0 +1,68 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:001 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Give me all oxidoreductase inhibitors active <100 nM in human and mouse."@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:   <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX ec:    <http://purl.uniprot.org/enzyme/>
+PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX taxon: <http://purl.uniprot.org/taxonomy/>
+PREFIX up:    <http://purl.uniprot.org/core/>
+PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT
+       ?molecule
+       ?humanProtein ?humanType ?humanValue
+       ?mouseProtein ?mouseType ?mouseValue
+WHERE {
+
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    SELECT DISTINCT ?humanProtein ?mouseProtein WHERE {
+      ?humanProtein up:organism taxon:9606 ;
+          (up:enzyme | up:domain/up:enzyme | up:component/up:enzyme) ?enzyme .
+      ?mouseProtein up:organism taxon:10090 ;
+          (up:enzyme | up:domain/up:enzyme | up:component/up:enzyme) ?enzyme .
+      ?enzyme rdfs:subClassOf ec:1.-.-.- .
+    }
+  }
+
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+
+    ?humanActivity a cco:Activity ;
+        cco:hasMolecule ?molecule ;
+        cco:hasAssay ?humanAssay ;
+        cco:standardType ?humanType ;
+        cco:standardValue ?humanValue ;
+        cco:standardUnits "nM" .
+
+    ?humanAssay
+        cco:hasTarget/
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?humanProtein .
+
+    ?mouseActivity a cco:Activity ;
+        cco:hasMolecule ?molecule ;
+        cco:hasAssay ?mouseAssay ;
+        cco:standardType ?mouseType ;
+        cco:standardValue ?mouseValue ;
+        cco:standardUnits "nM" .
+
+    ?mouseAssay
+        cco:hasTarget/
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?mouseProtein .
+
+    FILTER(xsd:decimal(?humanValue) < 100)
+    FILTER(xsd:decimal(?mouseValue) < 100)
+
+    # Operational approximation of "inhibitor"
+    FILTER(?humanType IN ("IC50", "Ki"))
+    FILTER(?mouseType IN ("IC50", "Ki"))
+  }
+}
+LIMIT 500""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

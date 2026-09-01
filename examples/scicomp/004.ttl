@@ -1,0 +1,77 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:004 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "For a given compound (here imatinib), summarize similar compounds and their activities."@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX up: <http://purl.uniprot.org/core/>
+
+SELECT DISTINCT
+       ?compound
+       ?similarity
+       ?protein
+       ?proteinName
+       ?activityType
+       ?value
+       ?unit
+WHERE {
+
+  # The chemistry + bioactivity side is computed first and capped, so only a
+  # small, bounded set of ?protein values is sent to UniProt. Materialising the
+  # whole UniProt name table instead is prohibitively slow here.
+  {
+    SELECT DISTINCT ?compound ?similarity ?protein ?activityType ?value ?unit
+    WHERE {
+  # Sachem similarity search over ChEMBL structures. The query structure is
+    # imatinib (PubChem CID 5291, ChEMBL941) - replace the SMILES to profile a
+    # different compound.
+    # NOTE: results are limited with sachem:topn only. sachem:cutoff is accepted
+    # by the endpoint but returns zero rows at any threshold (verified for
+    # 0.5 and 0.8 even though the top scores here are 0.95-1.0), so ranking is
+    # done with ORDER BY DESC(?similarity) instead.
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/chembl> {
+      [
+        sachem:compound ?compound ;
+        sachem:score ?similarity
+      ]
+      sachem:similaritySearch [
+        sachem:query "CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC=C5" ;
+        sachem:topn 20
+      ] .
+    }
+
+    # Reported activities of those similar compounds, and the target component
+    # each assay maps to.
+    GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+      ?activity a cco:Activity ;
+          cco:hasMolecule ?compound ;
+          cco:hasAssay ?assay ;
+          cco:standardType ?activityType ;
+          cco:standardValue ?value ;
+          cco:standardUnits ?unit .
+
+      ?assay
+          cco:hasTarget/
+          cco:hasTargetComponent/
+          cco:targetCmptXref ?protein .
+
+      FILTER(STRSTARTS(STR(?protein), "http://purl.uniprot.org/uniprot/"))
+    }
+
+    }
+    LIMIT 200
+  }
+
+  # UniProt leg: recommended full name for each of those target proteins.
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    ?protein up:recommendedName/up:fullName ?proteinName .
+  }
+}
+ORDER BY DESC(?similarity) ?value
+LIMIT 200""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

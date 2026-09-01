@@ -1,0 +1,51 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:002 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "What compounds are known to modulate human PRKCA (protein kinase C alpha, UniProt P17252) directly?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
+
+SELECT DISTINCT
+       ?compound
+       ?compoundLabel
+       ?activityType
+       ?value
+       ?unit
+       ?assay
+WHERE {
+
+  VALUES ?protein {
+    uniprot:P17252
+  }
+
+  ?protein a up:Protein .
+
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+
+    ?activity a cco:Activity ;
+        cco:hasMolecule ?compound ;
+        cco:hasAssay ?assay ;
+        cco:standardType ?activityType ;
+        cco:standardValue ?value ;
+        cco:standardUnits ?unit .
+
+    ?assay cco:hasTarget ?target .
+
+    ?target
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?protein .
+
+    OPTIONAL {
+      ?compound rdfs:label ?compoundLabel .
+    }
+  }
+}
+ORDER BY ?value""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .
