@@ -1,0 +1,74 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:001 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which molecules are hydrophobic, can cross the blood-brain barrier, and have been experimentally shown to interact with the human 5-HT2C receptor?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:  <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sio:  <http://semanticscience.org/resource/>
+PREFIX up:   <http://purl.uniprot.org/core/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?chemblId ?name (MIN(?nm) AS ?bestNM) (SAMPLE(?alogp) AS ?logP)
+       (SAMPLE(?tpsa) AS ?TPSA) (SAMPLE(?mw) AS ?MW) (SAMPLE(?phase) AS ?maxPhase)
+WHERE {
+  # (1) TARGET: resolve the human 5-HT2C receptor at UniProt (not by name string).
+  #     Wrapped in a subselect so IDSM materialises the remote result before joining.
+  { SELECT ?protein WHERE {
+      SERVICE <https://sparql.uniprot.org/sparql> {
+        ?protein a up:Protein ;
+                 up:mnemonic "5HT2C_HUMAN" ;
+                 up:organism <http://purl.uniprot.org/taxonomy/9606> .
+      }
+  } }
+
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+    # single-protein human target only (excludes 5-HT2 family/selectivity groups)
+    ?target cco:hasTargetComponent/cco:targetCmptXref ?protein ;
+            cco:targetType   "SINGLE PROTEIN" ;
+            cco:organismName "Homo sapiens" .
+
+    # (2) EXPERIMENTALLY SHOWN TO INTERACT: exact-value binding/functional assay
+    ?assay cco:hasTarget ?target ;
+           cco:assayType ?atype ;
+           dcterms:description ?assayLabel .
+    FILTER(?atype IN ("Binding", "Functional"))
+
+    ?act cco:hasAssay        ?assay ;
+         cco:hasMolecule     ?mol ;
+         cco:standardType    ?stype ;
+         cco:standardRelation "=" ;
+         cco:standardUnits    "nM" ;
+         cco:standardValue    ?nm .
+    FILTER(?stype IN ("Ki", "Kd", "IC50", "EC50"))
+    FILTER(?nm > 0.0 && ?nm <= 1000.0)
+
+    # human receptor system; exclude non-human tissue preparations
+    FILTER(REGEX(?assayLabel, "human|HEK293|CHO|tsA201|GripTite", "i"))
+    FILTER(!REGEX(?assayLabel, "porcine|bovine|rat |mouse|murine|canine|monkey|calf", "i"))
+
+    ?mol cco:chemblId ?chemblId ; rdfs:label ?name .
+
+    # (3) HYDROPHOBIC: AlogP >= 3   |   (4) BBB descriptor profile (CNS-MPO-consistent)
+    ?mol sio:SIO_000008 [ a sio:CHEMINF_000251 ; sio:SIO_000300 ?alogp ] ,  # AlogP
+                        [ a sio:CHEMINF_000307 ; sio:SIO_000300 ?tpsa  ] ,  # TPSA
+                        [ a sio:CHEMINF_000216 ; sio:SIO_000300 ?mw    ] ,  # MW
+                        [ a sio:CHEMINF_000244 ; sio:SIO_000300 ?hbd   ] ,  # HB donors
+                        [ a sio:CHEMINF_000254 ; sio:SIO_000300 ?rtb   ] .  # rotatable bonds
+    FILTER(?alogp >= 3.0 && ?alogp <= 5.0)
+    FILTER(?tpsa <= 90.0 && ?mw <= 450.0 && ?hbd <= 3.0 && ?rtb <= 8.0)
+
+    # (5) BBB EXPERIMENTAL EVIDENCE: reached the clinic as a CNS-active agent
+    ?mol cco:highestDevelopmentPhase ?phase .
+    FILTER(?phase >= 1)
+  }
+}
+GROUP BY ?chemblId ?name
+ORDER BY ?bestNM
+
+""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

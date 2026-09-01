@@ -1,0 +1,47 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:009 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How do methylnicotine (6-methylnicotine) and nicotine compare in binding kinetics, binding affinity, and in-vivo pharmacokinetic readouts?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sio:     <http://semanticscience.org/resource/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX up:      <http://purl.uniprot.org/core/>
+
+SELECT ?compound ?chemblId ?stdType ?relation ?value ?units ?targetName ?assayType ?assayDesc
+WHERE {
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+    # Both compounds selected by InChIKey — a STRUCTURAL identity, because
+    # 6-methylnicotine has NO pref_name in ChEMBL (it is CHEMBL5787731) and so
+    # cannot be found by name. Keys from PubChem CID 89594 / CID 25768196.
+    VALUES (?ik ?compound) {
+      ("SNICXCGAKADSCV-JTQLQIEISA-N" "nicotine")
+      ("SWNIAVIKMKSDBJ-NSHDSACASA-N" "6-methylnicotine")
+    }
+    ?mol sio:SIO_000008 [ a sio:CHEMINF_000059 ; sio:SIO_000300 ?ik ] ;
+         cco:chemblId ?chemblId .
+
+    ?act cco:hasMolecule  ?mol ;
+         cco:hasAssay     ?assay ;
+         cco:standardType ?stdType .
+    OPTIONAL { ?act cco:standardValue    ?value }
+    OPTIONAL { ?act cco:standardUnits    ?units }
+    OPTIONAL { ?act cco:standardRelation ?relation }
+
+    ?assay cco:assayType ?assayType .
+    OPTIONAL { ?assay dcterms:description ?assayDesc }
+    OPTIONAL { ?assay cco:hasTarget/dcterms:title ?targetName }
+
+    # kinetics (koff/kon), affinity (Ki/Kd/IC50/EC50), and in-vivo /
+    # ADMET readouts — the three parts of the question that ChEMBL records.
+    FILTER(?stdType IN ("koff","kon","Kd","Ki","IC50","EC50","pKi","pKb",
+                        "Vdss","Fu","CL","T1/2","Cmax","AUC","F"))
+  }
+}
+ORDER BY ?compound ?stdType""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

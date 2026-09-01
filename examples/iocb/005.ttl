@@ -1,0 +1,52 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:005 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "What are the koff and kon values for agomelatine at the human 5-HT2C receptor?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?molName ?chemblId ?stdType ?relation ?value ?units ?assayDesc ?doc
+WHERE {
+  # Target leg: human 5-HT2C resolved at UniProt, joined into ChEMBL.
+  { SELECT ?protein WHERE {
+      SERVICE <https://sparql.uniprot.org/sparql> {
+        ?protein a up:Protein ; up:mnemonic "5HT2C_HUMAN" ;
+                 up:organism <http://purl.uniprot.org/taxonomy/9606> .
+      }
+  } }
+
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+    ?target cco:hasTargetComponent/cco:targetCmptXref ?protein ;
+            cco:targetType "SINGLE PROTEIN" .
+
+    # Ligand leg: agomelatine, matched on preferred label (not a guessed ID).
+    ?mol a cco:SmallMolecule ;
+         cco:chemblId ?chemblId ;
+         rdfs:label   ?molName .
+    FILTER(UCASE(?molName) = "AGOMELATINE")
+
+    ?act cco:hasMolecule ?mol ;
+         cco:hasAssay    ?assay ;
+         cco:standardType ?stdType .
+    ?assay cco:hasTarget ?target .
+    OPTIONAL { ?assay dcterms:description ?assayDesc }
+    OPTIONAL { ?act cco:standardValue    ?value }
+    OPTIONAL { ?act cco:standardUnits    ?units }
+    OPTIONAL { ?act cco:standardRelation ?relation }
+    OPTIONAL { ?act cco:hasDocument      ?doc }
+
+    # Binding-kinetics measurements. koff/kon are the requested quantities;
+    # Kd/Ki/pKb are retained because koff/kon are (verified) absent here, and
+    # equilibrium constants are the only kinetics-adjacent data that exist.
+    FILTER(?stdType IN ("koff","kon","Kd","KD","Ki","pKb","IC50","EC50","AC50"))
+  }
+}
+ORDER BY ?stdType ?value""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

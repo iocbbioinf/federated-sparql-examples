@@ -1,0 +1,55 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:007 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which deuterated drug analogues are currently in clinical development or testing, what non-deuterated parent compound is each a minimal variant of, and what is the corresponding Wikidata concept?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sio:     <http://semanticscience.org/resource/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+
+SELECT DISTINCT ?chemblId ?molName ?phase ?parentName ?wdItem ?wdLabel
+WHERE {
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+    ?mol cco:chemblId ?chemblId ;
+         rdfs:label   ?molName ;
+         cco:highestDevelopmentPhase ?phase .
+
+    # In medical development / testing (any clinical phase, or approved).
+    FILTER(?phase >= 1)
+
+    # DEUTERATED: an explicit [2H] isotope label in the canonical SMILES.
+    # This is a genuine STRUCTURAL test, not a name search — it catches
+    # deuterated analogues whose names do not start with "deu-".
+    ?mol sio:SIO_000008 [ a sio:CHEMINF_000018 ; sio:SIO_000300 ?smiles ] .
+    FILTER(CONTAINS(?smiles, "[2H]"))
+
+    # The "small change only" relationship: ChEMBL links a salt/isotopologue
+    # to its parent structure. Where present, this names the compound the
+    # deuterated analogue is a minimal variant OF.
+    OPTIONAL {
+      ?mol cco:hasParentMolecule ?parent .
+      ?parent rdfs:label ?parentName .
+      OPTIONAL { ?parent cco:highestDevelopmentPhase ?parentPhase }
+    }
+  }
+
+  # Cross-KG identity for the deuterated drug: Wikidata concept + label,
+  # bridged on the ChEMBL id (P592). Wikidata is queried in its own
+  # subselect so the remote result is materialised once.
+  OPTIONAL {
+    { SELECT ?chemblId ?wdItem ?wdLabel WHERE {
+        SERVICE <https://query.wikidata.org/sparql> {
+          ?wdItem wdt:P592 ?chemblId ; rdfs:label ?wdLabel .
+          FILTER(lang(?wdLabel) = "en")
+        }
+    } }
+  }
+}
+ORDER BY DESC(?phase) ?molName""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

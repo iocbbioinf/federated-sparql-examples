@@ -1,0 +1,79 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:006 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which molecules that target human GPCRs have entered phase 1 or phase 2 clinical testing recently, and which UniProtKB protein does each target correspond to?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX up:      <http://purl.uniprot.org/core/>
+
+SELECT DISTINCT ?chemblId ?molName ?phase ?targetName ?gpcrFamily ?latestYear ?uniprotMnemonic
+WHERE {
+  # UniProt leg: confirm the ChEMBL target is a reviewed human protein and
+  # return its UniProtKB mnemonic. The inner SELECT makes UniProt evaluate the
+  # pattern remotely and hand back a materialised table, which the driver then
+  # joins locally on ?xref. Nesting this inside OPTIONAL{{SELECT ...}} makes
+  # IDSM throw UnsupportedOperationException, so it sits at top level.
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    SELECT ?xref ?uniprotMnemonic WHERE {
+      ?xref up:reviewed true ;
+            up:mnemonic ?uniprotMnemonic ;
+            up:organism <http://purl.uniprot.org/taxonomy/9606> .
+    }
+  }
+  {
+    SELECT ?mol ?chemblId ?molName ?phase ?targetName ?gpcrFamily ?xref
+           (MAX(?year) AS ?latestYear)
+    WHERE {
+      GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+        # --- GPCR target: ChEMBL's five L2 GPCR families, plus any class
+        #     beneath them (skos:broader* walks the hierarchy upward).
+        VALUES ?gpcrClass {
+          <http://rdf.ebi.ac.uk/resource/chembl/protclass/CHEMBL_PC_1020>  # Family A
+          <http://rdf.ebi.ac.uk/resource/chembl/protclass/CHEMBL_PC_1021>  # Family B
+          <http://rdf.ebi.ac.uk/resource/chembl/protclass/CHEMBL_PC_1022>  # Family C
+          <http://rdf.ebi.ac.uk/resource/chembl/protclass/CHEMBL_PC_619>   # Frizzled
+          <http://rdf.ebi.ac.uk/resource/chembl/protclass/CHEMBL_PC_620>   # Taste
+        }
+        ?gpcrClass rdfs:label ?gpcrFamily .
+
+        ?target cco:hasTargetComponent ?tc ;
+                cco:targetType   "SINGLE PROTEIN" ;
+                cco:organismName "Homo sapiens" ;
+                dcterms:title    ?targetName .
+        ?tc cco:hasProteinClassification ?pcls ;
+            cco:targetCmptXref ?xref .
+        FILTER(STRSTARTS(STR(?xref), "http://purl.uniprot.org/uniprot/"))
+        ?pcls (skos:broader)* ?gpcrClass .
+
+        # --- Molecule in clinical phase 1 or 2, with activity on that target
+        ?assay cco:hasTarget  ?target .
+        ?act   cco:hasAssay   ?assay ;
+               cco:hasMolecule ?mol ;
+               cco:hasDocument ?doc .
+        ?mol cco:chemblId ?chemblId ;
+             rdfs:label   ?molName ;
+             cco:highestDevelopmentPhase ?phase .
+        FILTER(?phase = 1 || ?phase = 2)
+
+        # --- Recency. ChEMBL RDF has NO trial/approval date on molecules
+        #     (verified: cco:firstApproval does not exist). The only usable
+        #     time signal is the supporting document's year, so "last 5 years"
+        #     is approximated by most-recent supporting publication.
+        ?doc dcterms:date ?year .
+      }
+    }
+    GROUP BY ?mol ?chemblId ?molName ?phase ?targetName ?gpcrFamily ?xref
+  }
+  FILTER(?latestYear >= 2021)
+
+}
+ORDER BY DESC(?latestYear) ?molName
+LIMIT 200""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

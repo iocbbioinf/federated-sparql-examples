@@ -1,0 +1,33 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:004 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which experimentally determined structures exist for the GPCRs in which lateral, membrane-facing ligand entry or egress through the transmembrane helices has been reported (CysLT1R, GPR183, S1P1, CB1, LPA1)?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?ac ?mnemonic ?name ?pdbid ?method ?resolution
+WHERE {
+  VALUES ?protein {
+    <http://purl.uniprot.org/uniprot/Q9Y271>   # CysLT1R  - lateral access TM4/TM5 (crystallographic)
+    <http://purl.uniprot.org/uniprot/P32249>   # GPR183   - lateral entry TM4/TM5 (MD + mutagenesis)
+    <http://purl.uniprot.org/uniprot/P21453>   # S1P1     - TM1/TM7 gate
+    <http://purl.uniprot.org/uniprot/P21554>   # CB1      - TM1/TM7 gate
+    <http://purl.uniprot.org/uniprot/Q92633>   # LPA1     - TM1/TM7 gate
+  }
+  ?protein up:mnemonic ?mnemonic ; rdfs:seeAlso ?pdb .
+  OPTIONAL { ?protein up:recommendedName/up:fullName ?name }
+  ?pdb up:database <http://purl.uniprot.org/database/PDB> ;
+       up:method ?method .
+  OPTIONAL { ?pdb up:resolution ?resolution }
+  BIND(STRAFTER(STR(?protein),"uniprot/") AS ?ac)
+  BIND(STRAFTER(STR(?pdb),"pdb/")        AS ?pdbid)
+}
+ORDER BY ?mnemonic ?pdbid
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

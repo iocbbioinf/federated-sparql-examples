@@ -1,0 +1,69 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:002 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which hydrophobic, blood-brain-barrier-permeant ligands of the human 5-HT2C receptor are there, together with their Wikidata concept and PubChem compound identifiers?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sio:     <http://semanticscience.org/resource/>
+PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+
+SELECT ?chemblId ?name ?bestNM ?logP ?wdItem ?wdLabel ?pubchemCIDs
+WHERE {
+  {
+    SELECT ?mol ?chemblId ?name (MIN(?nm) AS ?bestNM) (SAMPLE(?alogp) AS ?logP)
+    WHERE {
+      { SELECT ?protein WHERE {
+          SERVICE <https://sparql.uniprot.org/sparql> {
+            ?protein a up:Protein ; up:mnemonic "5HT2C_HUMAN" ;
+                     up:organism <http://purl.uniprot.org/taxonomy/9606> .
+          }
+      } }
+      GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+        ?target cco:hasTargetComponent/cco:targetCmptXref ?protein ;
+                cco:targetType "SINGLE PROTEIN" ; cco:organismName "Homo sapiens" .
+        ?assay cco:hasTarget ?target ; cco:assayType ?atype ; dcterms:description ?ad .
+        FILTER(?atype IN ("Binding","Functional"))
+        ?act cco:hasAssay ?assay ; cco:hasMolecule ?mol ; cco:standardType ?stype ;
+             cco:standardRelation "=" ; cco:standardUnits "nM" ; cco:standardValue ?nm .
+        FILTER(?stype IN ("Ki","Kd","IC50","EC50"))
+        FILTER(?nm > 0.0 && ?nm <= 1000.0)
+        FILTER(REGEX(?ad,"human|HEK293|CHO|tsA201|GripTite","i"))
+        FILTER(!REGEX(?ad,"porcine|bovine|rat |mouse|murine|canine|monkey|calf","i"))
+        ?mol cco:chemblId ?chemblId ; rdfs:label ?name .
+        ?mol sio:SIO_000008 [ a sio:CHEMINF_000251 ; sio:SIO_000300 ?alogp ] ,
+                            [ a sio:CHEMINF_000307 ; sio:SIO_000300 ?tpsa ] ,
+                            [ a sio:CHEMINF_000216 ; sio:SIO_000300 ?mw ] ,
+                            [ a sio:CHEMINF_000244 ; sio:SIO_000300 ?hbd ] ,
+                            [ a sio:CHEMINF_000254 ; sio:SIO_000300 ?rtb ] .
+        FILTER(?alogp >= 3.0 && ?alogp <= 5.0)
+        FILTER(?tpsa <= 90.0 && ?mw <= 450.0 && ?hbd <= 3.0 && ?rtb <= 8.0)
+        ?mol cco:highestDevelopmentPhase ?phase .
+        FILTER(?phase >= 1)
+      }
+    }
+    GROUP BY ?mol ?chemblId ?name
+  }
+  OPTIONAL {
+    {
+      SELECT ?chemblId ?wdItem ?wdLabel
+             (GROUP_CONCAT(DISTINCT ?c; SEPARATOR=", ") AS ?pubchemCIDs)
+      WHERE {
+        SERVICE <https://query.wikidata.org/sparql> {
+          ?wdItem wdt:P592 ?chemblId ; rdfs:label ?wdLabel .
+          OPTIONAL { ?wdItem wdt:P662 ?c }
+          FILTER(lang(?wdLabel) = "en")
+        }
+      }
+      GROUP BY ?chemblId ?wdItem ?wdLabel
+    }
+  }
+}
+ORDER BY ?bestNM""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

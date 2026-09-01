@@ -1,0 +1,55 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:008 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which chemical analogues of alkaloids are currently approved or undergoing clinical testing, and to which alkaloid family does each belong?"@en ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:   <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sio:   <http://semanticscience.org/resource/>
+PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX obo:   <http://purl.obolibrary.org/obo/>
+PREFIX chemrof: <https://w3id.org/chemrof/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT DISTINCT ?chemblId ?molName ?phase ?chebiId ?chebiLabel ?alkaloidSubclass ?parentName
+WHERE {
+  # --- Leg 1 (ChEBI): the alkaloid class subtree.
+  #     CHEBI_22315 = alkaloid (verified via OLS; and note Wikidata's Q70702
+  #     P279* walk was REJECTED for this query - it pulls in indomethacin,
+  #     ciprofloxacin, biotin and miconazole, which are not alkaloids.
+  #     ChEBI's curated hierarchy is clean.)
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chebi> {
+    ?chebiCls rdfs:subClassOf* obo:CHEBI_22315 ;
+              rdfs:label            ?chebiLabel ;
+              chemrof:inchi_key_string ?ik ;
+              oboInOwl:id           ?chebiId .
+    # the immediate alkaloid family (indole/vinca/aporphine/... ) when present
+    OPTIONAL {
+      ?chebiCls rdfs:subClassOf ?sub .
+      ?sub rdfs:label ?alkaloidSubclass .
+      FILTER(CONTAINS(LCASE(?alkaloidSubclass), "alkaloid"))
+    }
+  }
+
+  # --- Leg 2 (ChEMBL): same compound by InChIKey, in clinical development.
+  #     InChIKey is a STRUCTURAL identity join - no name matching, and it
+  #     survives the two datasets naming a compound differently.
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+    ?mol sio:SIO_000008 [ a sio:CHEMINF_000059 ; sio:SIO_000300 ?ik ] ;
+         cco:chemblId ?chemblId ;
+         rdfs:label   ?molName ;
+         cco:highestDevelopmentPhase ?phase .
+    FILTER(?phase >= 1)
+    # "analog of" - ChEMBL's parent-structure link, when the clinical entity
+    # is a salt/derivative of the parent alkaloid
+    OPTIONAL {
+      ?mol cco:hasParentMolecule ?parent .
+      ?parent rdfs:label ?parentName .
+    }
+  }
+}
+ORDER BY DESC(?phase) ?molName""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .
