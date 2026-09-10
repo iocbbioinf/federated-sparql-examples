@@ -1,0 +1,110 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:002 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How can I programmatically access the following databases: PDB, UniProt, Rhea, PubChem, and ChEMBL? Answered from the SPARQL service descriptions published alongside VoID, plus UniProt's machine-readable registry of database URL templates."@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql>,
+        <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+# HOW DO I ACCESS THESE DATABASES PROGRAMMATICALLY?
+#
+# Two machine-readable routes, both discovered rather than assumed:
+#
+#   SPARQL protocol  - each endpoint publishes a sd:Service description next
+#                      to its VoID, naming its own sd:endpoint URL, the query
+#                      language it speaks and the federation features it
+#                      supports. That is the contract a client codes against.
+#   REST / resolvable - UniProt maintains a registry of the databases it
+#                      cross-references (the <.../database> graph), and each
+#                      entry carries an up:urlTemplate whose %u / %s
+#                      placeholder is substituted with an accession. This is
+#                      how PDB, ChEMBL and PubChem records are fetched.
+
+SELECT ?database ?accessRoute ?endpointOrTemplate
+       (GROUP_CONCAT(DISTINCT STR(?queryLanguage);     separator=", ") AS ?queryLanguages)
+       (GROUP_CONCAT(DISTINCT STR(?federationFeature); separator=", ") AS ?features)
+       (COUNT(DISTINCT ?graphName) AS ?nNamedGraphs)
+WHERE {
+  {
+    # (A) SPARQL access to UNIPROT, self-described in its own VoID graph.
+    GRAPH <https://sparql.uniprot.org/.well-known/void> {
+      ?service a sd:Service ;
+               sd:endpoint          ?endpointOrTemplate ;
+               sd:supportedLanguage ?queryLanguage .
+      OPTIONAL { ?service sd:feature ?federationFeature }
+      OPTIONAL { ?service dcterms:title ?title }
+    }
+    BIND(COALESCE(?title, "UniProt") AS ?database)
+    BIND("SPARQL 1.1 protocol" AS ?accessRoute)
+  }
+  UNION
+  {
+    # (B) SPARQL access to RHEA, read from Rhea's own service description
+    #     over federation - the same discovery pattern, a different server.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+        ?service a sd:Service ;
+                 sd:endpoint          ?endpointOrTemplate ;
+                 sd:supportedLanguage ?queryLanguage .
+        OPTIONAL { ?service sd:feature ?federationFeature }
+      }
+    }
+    BIND("Rhea" AS ?database)
+    BIND("SPARQL 1.1 protocol (federated SERVICE)" AS ?accessRoute)
+  }
+  UNION
+  {
+    # (C) REST / resolvable-URL access to PDB, ChEMBL, PubChem and friends,
+    #     taken from UniProt's machine-readable cross-reference registry.
+    #     up:urlTemplate is the programmatic access pattern for one record.
+    GRAPH <http://sparql.uniprot.org/database> {
+      ?db a up:Database ;
+          up:abbreviation ?database ;
+          up:urlTemplate  ?endpointOrTemplate .
+    }
+    FILTER(?database IN ("PDB", "RCSB-PDB", "PDBe", "PDBsum",
+                         "ChEMBL", "PubChem", "DrugBank", "BindingDB", "Rhea"))
+    BIND("REST / resolvable URL - substitute the accession for %u or %s" AS ?accessRoute)
+  }
+  UNION
+  {
+    # (D) PUBCHEM and CHEMBL are not in UniProt's URL-template registry, but
+    #     both are served as local named graphs by IDSM - so their access
+    #     route is IDSM's own SPARQL endpoint. Discovered from IDSM's VoID:
+    #     the graph names below are read, not assumed.
+    # NOTE: STRSTARTS over these graph names crashes IDSM
+    #       (NullPointerException), so the graphs are selected with CONTAINS.
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+      SELECT ?endpointOrTemplate ?queryLanguage ?federationFeature ?graphName
+      WHERE {
+        GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+          ?service a sd:Service ;
+                   sd:endpoint          ?endpointOrTemplate ;
+                   sd:supportedLanguage ?queryLanguage ;
+                   sd:availableGraphs   ?graphCollection ;
+                   sd:feature           ?federationFeature .
+          ?graphCollection sd:namedGraph ?ng .
+          ?ng sd:name ?graphName .
+        }
+        FILTER(CONTAINS(STR(?graphName), "pubchem")
+            || CONTAINS(STR(?graphName), "chembl"))
+      }
+    }
+    BIND(IF(CONTAINS(STR(?graphName), "pubchem"), "PubChem", "ChEMBL") AS ?database)
+    BIND("SPARQL 1.1 protocol (local named graph at IDSM)" AS ?accessRoute)
+  }
+}
+GROUP BY ?database ?accessRoute ?endpointOrTemplate
+ORDER BY ?accessRoute ?database ?endpointOrTemplate
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

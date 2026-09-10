@@ -1,0 +1,65 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:001 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "What are UniProt and Rhea, and what kinds of data can I find in them? Answered entirely from the VoID dataset descriptions the two endpoints publish about themselves."@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX pav:     <http://purl.org/pav/>
+
+# WHAT ARE UNIPROT AND RHEA, AND WHAT IS IN THEM?
+#
+# Nothing here is hard-coded prose: every row is read out of the VoID
+# description that each endpoint serves at its own /.well-known/void graph.
+# VoID answers "what kinds of data" structurally - each named graph is a
+# void:Dataset whose void:classes / void:triples / void:distinctSubjects say
+# how big it is and how many kinds of thing it holds.
+
+SELECT ?database ?release ?dataCollection ?kindsOfThing ?triples ?subjects ?license
+WHERE {
+  {
+    # (A) UNIPROT describes itself, graph by graph. The UniProt VoID also
+    #     carries a description of the Rhea graph it mirrors locally, so the
+    #     inventory of "what can I find here" spans both resources.
+    GRAPH <https://sparql.uniprot.org/.well-known/void> {
+      ?service sd:endpoint <https://sparql.uniprot.org/sparql> ;
+               dcterms:title ?database .
+      OPTIONAL { ?service sd:defaultDataset/pav:version ?release }
+
+      # Each available named graph = one data collection in the endpoint.
+      ?graphDesc sd:name ?dataCollection ;
+                 sd:graph ?stats .
+      ?stats void:classes ?kindsOfThing .
+      OPTIONAL { ?stats void:triples          ?triples  }
+      OPTIONAL { ?stats void:distinctSubjects ?subjects }
+      OPTIONAL { ?dataCollection dcterms:license ?license }
+    }
+  }
+  UNION
+  {
+    # (B) RHEA describes itself, over federation, in exactly the same VoID
+    #     shape - so the two resources are directly comparable. Rhea serves
+    #     no dcterms:title, so the name is supplied here; every number is
+    #     still read from Rhea's own VoID graph.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+        ?graphDesc sd:name ?dataCollection ;
+                   sd:graph ?stats .
+        ?stats void:classes ?kindsOfThing .
+        OPTIONAL { ?stats void:triples          ?triples  }
+        OPTIONAL { ?stats void:distinctSubjects ?subjects }
+      }
+    }
+    BIND("Rhea" AS ?database)
+  }
+}
+ORDER BY DESC(?triples) ?database ?dataCollection
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

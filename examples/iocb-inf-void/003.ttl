@@ -1,0 +1,110 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:003 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Where can I find documentation for their data formats? Which data formats are used by PDB, UniProt, Rhea, PubChem, and ChEMBL? The serialisation formats come from each endpoint's sd:resultFormat declarations, and the documentation pointers from UniProt's database registry."@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql>,
+        <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX voidext: <http://ldf.fi/void-ext#>
+
+# WHICH DATA FORMATS, AND WHERE IS THE DOCUMENTATION?
+#
+# Three complementary kinds of answer, all machine-readable:
+#
+#  (1) SERIALISATION FORMATS - sd:resultFormat lists, per endpoint, exactly
+#      which media types it can return. Each value is a URI in the W3C
+#      formats registry (http://www.w3.org/ns/formats/...), so the format
+#      URI *is* the pointer to that format's own specification.
+#  (2) LITERAL DATATYPES - VoID-ext datatype partitions say which XSD types
+#      actually occur in the data, i.e. the format of the values themselves.
+#  (3) RECORD DOCUMENTATION - UniProt's database registry gives, for each
+#      cross-referenced resource (PDB, ChEMBL, ...), a homepage and the DOI
+#      of the publication that defines its data model.
+
+SELECT DISTINCT ?database ?answerKind ?formatOrDatatype ?nPartitions ?documentation
+WHERE {
+  {
+    # (1a) UNIPROT: the formats its SPARQL endpoint serves.
+    GRAPH <https://sparql.uniprot.org/.well-known/void> {
+      ?service a sd:Service ;
+               sd:endpoint      ?ep ;
+               sd:resultFormat  ?formatOrDatatype .
+    }
+    BIND("UniProt" AS ?database)
+    BIND("Serialisation format (sd:resultFormat)" AS ?answerKind)
+    # The format URI dereferences to its own W3C specification page.
+    BIND(?formatOrDatatype AS ?documentation)
+  }
+  UNION
+  {
+    # (1b) RHEA: same question, answered by Rhea's own service description.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+        ?service a sd:Service ; sd:resultFormat ?formatOrDatatype .
+      }
+    }
+    BIND("Rhea" AS ?database)
+    BIND("Serialisation format (sd:resultFormat)" AS ?answerKind)
+    BIND(?formatOrDatatype AS ?documentation)
+  }
+  UNION
+  {
+    # (1c) PUBCHEM + CHEMBL: served by IDSM, so IDSM's service description
+    #      states the formats in which their RDF can be retrieved.
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+      GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+        ?service a sd:Service ; sd:resultFormat ?formatOrDatatype .
+      }
+    }
+    BIND("PubChem + ChEMBL (via IDSM)" AS ?database)
+    BIND("Serialisation format (sd:resultFormat)" AS ?answerKind)
+    BIND(?formatOrDatatype AS ?documentation)
+  }
+  UNION
+  {
+    # (2) The datatypes really used inside UniProt's own data - the format
+    #     of the values, declared by VoID-ext datatype partitions. Reported
+    #     once per datatype (a subselect collapses the many partitions that
+    #     each datatype appears in).
+    {
+      SELECT ?formatOrDatatype (COUNT(*) AS ?nPartitions) WHERE {
+        GRAPH <https://sparql.uniprot.org/.well-known/void> {
+          ?part voidext:datatypePartition/voidext:datatype ?formatOrDatatype .
+        }
+      }
+      GROUP BY ?formatOrDatatype
+    }
+    BIND("UniProt" AS ?database)
+    BIND("Literal datatype in the data (voidext:datatype)" AS ?answerKind)
+    BIND(<https://www.w3.org/TR/xmlschema11-2/> AS ?documentation)
+  }
+  UNION
+  {
+    # (3) PDB, CHEMBL and the other cross-referenced resources: the registry
+    #     entry carries the homepage and the DOI of the defining paper.
+    GRAPH <http://sparql.uniprot.org/database> {
+      ?db a up:Database ;
+          up:abbreviation ?database .
+      OPTIONAL { ?db rdfs:seeAlso ?homepage }
+      OPTIONAL { ?db up:citation/dcterms:identifier ?doi }
+    }
+    FILTER(?database IN ("PDB", "RCSB-PDB", "PDBe", "PDBsum",
+                         "ChEMBL", "DrugBank", "BindingDB"))
+    BIND("Record/format documentation" AS ?answerKind)
+    BIND(COALESCE(?doi, "see homepage") AS ?formatOrDatatype)
+    BIND(?homepage AS ?documentation)
+  }
+}
+ORDER BY ?answerKind ?database ?formatOrDatatype
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

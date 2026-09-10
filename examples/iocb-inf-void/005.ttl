@@ -1,0 +1,111 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:005 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "One VoID-driven overview of all four questions at once: for UniProt, Rhea, PubChem and ChEMBL, how do I reach the endpoint, how big is it, which serialisation formats does it return, and which outward mappings does it declare? Every answer is read from dataset descriptions, never from instance data."@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql>,
+        <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void: <http://rdfs.org/ns/void#>
+PREFIX sd:   <http://www.w3.org/ns/sparql-service-description#>
+
+# A SINGLE VoID-ONLY PROFILE OF THE FEDERATION
+#
+# This is the "what is out there, and how do I use it" query. For each of
+# the three endpoints that serve the five databases, it reports:
+#
+#   endpoint        - the sd:endpoint URL to send SPARQL to        (Q2)
+#   nFormats        - how many serialisation formats it returns    (Q3)
+#   nNamedGraphs    - how many data collections it exposes         (Q1)
+#   nClassPartitions- how many kinds of entity it describes        (Q1)
+#   nLinksets       - how many outward mappings it declares        (Q4)
+#   totalTriples    - the size of the biggest collection it serves (Q1)
+#
+# Each endpoint is asked the same six questions about itself, so the three
+# rows are directly comparable. Every count is aggregated AT the endpoint
+# that owns the data - inside the remote SERVICE for Rhea and IDSM - so
+# only one small row crosses the network per endpoint. That is why this
+# profile of datasets totalling well over a hundred billion triples
+# returns in seconds: no instance data is ever touched.
+
+SELECT ?endpointDescribed ?endpoint
+       ?nFormats ?nNamedGraphs ?nClassPartitions ?nLinksets ?largestGraphTriples
+WHERE {
+  {
+    # (1) UNIPROT - this query's own target, so queried locally. It also
+    #     serves the Rhea mirror graph and a ChEBI copy.
+    {
+      SELECT (COUNT(DISTINCT ?fmt)   AS ?nFormats)
+             (COUNT(DISTINCT ?gname) AS ?nNamedGraphs)
+             (COUNT(DISTINCT ?cp)    AS ?nClassPartitions)
+             (COUNT(DISTINCT ?ls)    AS ?nLinksets)
+             (MAX(?t)                AS ?largestGraphTriples)
+             (SAMPLE(?ep)            AS ?endpoint)
+      WHERE {
+        GRAPH <https://sparql.uniprot.org/.well-known/void> {
+          { ?svc a sd:Service ; sd:endpoint ?ep . }
+          UNION { ?svc a sd:Service ; sd:resultFormat ?fmt . }
+          UNION { ?g sd:name ?gname . }
+          UNION { ?cp void:class ?c . }
+          UNION { ?ls void:linkPredicate ?lp . }
+          UNION { ?g2 sd:graph/void:triples ?t . }
+        }
+      }
+    }
+    BIND("UniProt (+ Rhea mirror, ChEBI)" AS ?endpointDescribed)
+  }
+  UNION
+  {
+    # (2) RHEA - the primary source for reactions, asked the same way.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      SELECT (COUNT(DISTINCT ?fmt)   AS ?nFormats)
+             (COUNT(DISTINCT ?gname) AS ?nNamedGraphs)
+             (COUNT(DISTINCT ?cp)    AS ?nClassPartitions)
+             (COUNT(DISTINCT ?ls)    AS ?nLinksets)
+             (MAX(?t)                AS ?largestGraphTriples)
+             (SAMPLE(?ep)            AS ?endpoint)
+      WHERE {
+        GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+          { ?svc a sd:Service ; sd:endpoint ?ep . }
+          UNION { ?svc a sd:Service ; sd:resultFormat ?fmt . }
+          UNION { ?g sd:name ?gname . }
+          UNION { ?cp void:class ?c . }
+          UNION { ?ls void:linkPredicate ?lp . }
+          UNION { ?g2 sd:graph/void:triples ?t . }
+        }
+      }
+    }
+    BIND("Rhea" AS ?endpointDescribed)
+  }
+  UNION
+  {
+    # (3) IDSM - the local host of PubChem and ChEMBL, reached over
+    #     federation like the others.
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+      SELECT (COUNT(DISTINCT ?fmt)   AS ?nFormats)
+             (COUNT(DISTINCT ?gname) AS ?nNamedGraphs)
+             (COUNT(DISTINCT ?cp)    AS ?nClassPartitions)
+             (COUNT(DISTINCT ?ls)    AS ?nLinksets)
+             (MAX(?t)                AS ?largestGraphTriples)
+             (SAMPLE(?ep)            AS ?endpoint)
+      WHERE {
+        GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+          { ?svc a sd:Service ; sd:endpoint ?ep . }
+          UNION { ?svc a sd:Service ; sd:resultFormat ?fmt . }
+          UNION { ?g sd:name ?gname . }
+          UNION { ?cp void:class ?c . }
+          UNION { ?ls void:linkPredicate ?lp . }
+          UNION { ?g2 void:triples ?t . }
+        }
+      }
+    }
+    BIND("IDSM (PubChem, ChEMBL, ChEBI, MolMeDB, ...)" AS ?endpointDescribed)
+  }
+}
+ORDER BY DESC(?largestGraphTriples)
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .
