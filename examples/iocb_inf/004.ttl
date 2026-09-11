@@ -1,0 +1,115 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:004 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How is UniProt interconnected with other databases such as PDB, Rhea, PubChem, and ChEMBL? What is the central entity in these mappings, and what is the cardinality (one-to-one, one-to-many, many-to-many) of each mapping?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void: <http://rdfs.org/ns/void#>
+PREFIX cco:  <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX up:   <http://purl.uniprot.org/core/>
+
+# HOW ARE THESE DATABASES INTERCONNECTED, AND WITH WHAT CARDINALITY?
+#
+# THE CENTRAL ENTITY is the UniProtKB accession (the protein). Every mapping
+# below is anchored on it: a ChEMBL target component carries the accession as
+# its cco:UniprotRef, and the same target component is what links onward to
+# PDB structures; PubChem even mints its protein URIs from the accession.
+# That makes the accession the hub through which all five resources join.
+#
+# WHY ANSWER THIS FROM VoID: a VoID linkset records, for ONE predicate
+# joining ONE pair of classes, the number of triples and the number of
+# DISTINCT subjects and objects those triples use. Those three published
+# numbers determine the cardinality outright:
+#
+#     triples / distinctSubjects = objects per subject  (fan-out)
+#     triples / distinctObjects  = subjects per object  (fan-in)
+#
+#     fan-out ~1, fan-in ~1  -> one-to-one
+#     fan-out >1, fan-in ~1  -> one-to-many
+#     fan-out ~1, fan-in >1  -> many-to-one
+#     both >1                -> many-to-many
+#
+# No protein, molecule or structure is ever read: the whole answer comes
+# from dataset-level metadata, which is why it is fast and exact.
+#
+# CAVEAT, and the reason part (B) reports no ratio: UniProt's VoID declares
+# void:entities per class partition as a GRAPH-WIDE figure, and publishes no
+# distinctSubjects/distinctObjects for these property partitions - so its
+# linkage can be shown to EXIST and be counted, but its cardinality cannot
+# honestly be computed from what UniProt publishes. Only IDSM's linksets
+# carry the distinct counts the derivation needs.
+
+SELECT DISTINCT ?linkFrom ?linkPredicate ?linkTo ?cardinality
+       ?triples ?distinctSubjects ?distinctObjects
+       ?objectsPerSubject ?subjectsPerObject
+WHERE {
+  {
+    # (A) LOCAL AT IDSM - ChEMBL's cross-reference linksets. ChEMBL is the
+    #     resource that points outward to UniProt, PDB, PubChem and ChEBI at
+    #     once, so these linksets answer most of the question, WITH ratios.
+    #     A DISTINCT subselect collapses the several graph-scoped linkset
+    #     copies IDSM publishes for each identical class pair.
+    {
+      SELECT DISTINCT ?linkFrom ?linkPredicate ?linkTo
+                      ?triples ?distinctSubjects ?distinctObjects
+      WHERE {
+        GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+          ?linkset void:linkPredicate    ?linkPredicate ;
+                   void:subjectsTarget   ?subjectPart ;
+                   void:objectsTarget    ?objectPart ;
+                   void:triples          ?triples ;
+                   void:distinctSubjects ?distinctSubjects ;
+                   void:distinctObjects  ?distinctObjects .
+          ?subjectPart void:class ?linkFrom .
+          ?objectPart  void:class ?linkTo .
+          FILTER(?linkPredicate IN (cco:targetCmptXref, cco:moleculeXref))
+        }
+        # Only the databases this question asks about.
+        FILTER(?linkTo IN (cco:UniprotRef, cco:ProteinDataBankRef,
+                           cco:PubchemRef, cco:ChebiRef))
+      }
+    }
+    # THE CARDINALITY RULE, applied to the published counts.
+    BIND(ROUND(1000.0 * ?triples / ?distinctSubjects) / 1000 AS ?objectsPerSubject)
+    BIND(ROUND(1000.0 * ?triples / ?distinctObjects)  / 1000 AS ?subjectsPerObject)
+    BIND(IF(?objectsPerSubject  < 1.05 && ?subjectsPerObject  < 1.05, "one-to-one",
+         IF(?objectsPerSubject >= 1.05 && ?subjectsPerObject  < 1.05, "one-to-many",
+         IF(?objectsPerSubject  < 1.05 && ?subjectsPerObject >= 1.05, "many-to-one",
+                                                                      "many-to-many")))
+         AS ?cardinality)
+  }
+  UNION
+  {
+    # (B) FEDERATED AT UNIPROT - the two links UniProt itself curates:
+    #     accession -> PDB structure, and accession -> Rhea reaction.
+    #     Their SIZE is published (void:triples on the property partition
+    #     of the owning class), so the link is proven and quantified; the
+    #     ratio is left unbound for the reason given in the header.
+    #     NOTE: IDSM refuses a SELECT DISTINCT inside SERVICE ("the SERVICE
+    #     pattern cannot be evaluated"), so this is written as plain triple
+    #     patterns and de-duplicated by the outer DISTINCT.
+    SERVICE <https://sparql.uniprot.org/sparql> {
+      GRAPH <https://sparql.uniprot.org/.well-known/void> {
+        ?classPart void:class             ?linkFrom ;
+                   void:propertyPartition ?propPart .
+        ?propPart void:property ?linkPredicate ;
+                  void:triples  ?triples .
+      }
+      FILTER(?linkFrom IN (up:Structure_Resource, up:Catalytic_Activity))
+      FILTER(?linkPredicate IN (up:database, up:catalyzedReaction))
+    }
+    BIND(IF(?linkPredicate = up:catalyzedReaction,
+            <http://rdf.rhea-db.org/Reaction>,
+            <http://purl.uniprot.org/database/PDB>) AS ?linkTo)
+    BIND("not derivable - UniProt publishes no distinct subject/object counts"
+         AS ?cardinality)
+  }
+}
+ORDER BY ?cardinality ?linkTo ?linkFrom
+""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .
