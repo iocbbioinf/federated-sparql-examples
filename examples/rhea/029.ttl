@@ -7,7 +7,7 @@
 ex:029 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Retrieve ChEMBL drugs that interact with UniProt enzymes catalyzing Rhea reactions involving members of the ChEBI class ChEBI:15889 (sterol) as participants."@en ;
-    spex:federatesWith <https://sparql.uniprot.org> ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -22,7 +22,7 @@ prefix skos: <http://www.w3.org/2004/02/skos/core#>
 
 SELECT DISTINCT ?protein ?proteinFullName ?activityType
     ?standardActivityValue ?standardActivityUnit ?chemblMolecule ?chemlbMoleculePrefLabel WHERE {
-  SERVICE <https://sparql.uniprot.org> {
+  SERVICE <https://sparql.uniprot.org/sparql> {
     SERVICE <https://sparql.rhea-db.org/sparql> {
       # retrieve members of the ChEBI class ChEBI:15889 (sterol)
       {

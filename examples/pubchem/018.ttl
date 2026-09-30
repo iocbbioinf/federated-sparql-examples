@@ -7,7 +7,7 @@
 ex:018 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which PDB structures with a resolution better than 2 Å that include Aspirin (CID 2244) and have associated bioactivity data in PubChem?"@en ;
-    spex:federatesWith <https://sparql.uniprot.org/sparql/> ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX up: <http://purl.uniprot.org/core/>
@@ -25,7 +25,7 @@ WHERE {
                pdbo:link_to_pdb ?structure .
   }
 
-  SERVICE <https://sparql.uniprot.org/sparql/> {
+  SERVICE <https://sparql.uniprot.org/sparql> {
     ?structure a up:Structure_Resource ;
                up:database <http://purl.uniprot.org/database/PDB> ;
                up:resolution ?resolution .
