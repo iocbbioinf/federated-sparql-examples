@@ -34,4 +34,4 @@ WHERE {
       FILTER (STRSTARTS(STR(?cmpd), "http://rdf.ncbi.nlm.nih.gov/pubchem/compound/"))
     }
 }""" ;
-    schema:target <https://idsm.elixir-czech.cz/sparql/> .
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

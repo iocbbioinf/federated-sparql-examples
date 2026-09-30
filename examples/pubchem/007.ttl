@@ -31,4 +31,4 @@ WHERE {
                pdbo:link_to_pdb ?pdb .
   }
 }""" ;
-    schema:target <https://idsm.elixir-czech.cz/sparql/> .
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .
