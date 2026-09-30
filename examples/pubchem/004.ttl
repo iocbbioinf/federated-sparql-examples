@@ -25,4 +25,4 @@ WHERE {
         glycan:has_sequence ?wurcs .
   }
 }""" ;
-    schema:target <https://idsm.elixir-czech.cz/sparql/> .
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

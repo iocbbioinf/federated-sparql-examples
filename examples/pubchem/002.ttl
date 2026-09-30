@@ -25,4 +25,4 @@ WHERE {
     ?compound (rh:chebi|(rh:reactivePart/rh:chebi)|(rh:underlyingChebi/rh:chebi)) ?chebi .
   }
 }""" ;
-    schema:target <https://idsm.elixir-czech.cz/sparql/> .
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

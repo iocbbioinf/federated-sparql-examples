@@ -26,4 +26,4 @@ WHERE {
     ?compound a ?chebi .
   }
 }""" ;
-    schema:target <https://idsm.elixir-czech.cz/sparql/> .
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .
