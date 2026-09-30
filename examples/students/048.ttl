@@ -2,10 +2,13 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:048 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which PDB structures of beta-tubulin - the target of paclitaxel - are bound to paclitaxel?"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/pubchem> ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql/> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX obo:     <http://purl.obolibrary.org/obo/>

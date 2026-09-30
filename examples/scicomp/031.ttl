@@ -2,10 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:031 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "What compounds are known to modulate human PRKCA (protein kinase C alpha, UniProt P17252) directly?"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>

@@ -2,10 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:003 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which human lipid-recognising GPCRs have experimentally determined structures, and what are their Wikidata concepts? (candidate set for receptors where a ligand can egress laterally into the membrane through the transmembrane helices)"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX up:      <http://purl.uniprot.org/core/>
 PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>

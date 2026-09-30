@@ -2,10 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:037 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which Rhea reactions involve any germacrene compound?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
 PREFIX up: <http://purl.uniprot.org/core/>

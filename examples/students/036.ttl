@@ -2,10 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:036 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which proteins in UniProtKB/Swiss-Prot have magnesium(2+) as a cofactor?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
 PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>

@@ -2,10 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:006 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which molecules that target human GPCRs have entered phase 1 or phase 2 clinical testing recently, and which UniProtKB protein does each target correspond to?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
 PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
