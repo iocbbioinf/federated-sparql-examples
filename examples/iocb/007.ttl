@@ -2,10 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:007 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which deuterated drug analogues are currently in clinical development or testing, what non-deuterated parent compound is each a minimal variant of, and what is the corresponding Wikidata concept?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
 PREFIX sio:     <http://semanticscience.org/resource/>

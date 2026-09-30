@@ -2,10 +2,13 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:002 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which hydrophobic, blood-brain-barrier-permeant ligands of the human 5-HT2C receptor are there, together with their Wikidata concept and PubChem compound identifiers?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
 PREFIX sio:     <http://semanticscience.org/resource/>

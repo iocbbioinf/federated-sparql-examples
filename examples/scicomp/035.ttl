@@ -2,10 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:035 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Which compounds annotated in an active Melochia umbellata extract have reported activity against Trypanosoma cruzi, and in which taxa are they reported?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
 PREFIX sio: <http://semanticscience.org/resource/>

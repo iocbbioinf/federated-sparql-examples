@@ -2,10 +2,12 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
 
 ex:024 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Retrieve the Rhea biochemical reactions that involve cholesterol or cholesterol derivatives"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/chebi> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
 PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
