@@ -7,7 +7,7 @@
 ex:019 a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "How can I retrieve all compounds involved in PDB structures with a resolution better than 2 Å for the protein Basic phospholipase A2 VRV-PL-VIIIa (UniProt ID: P59071)?"@en ;
-    spex:federatesWith <https://sparql.uniprot.org/sparql/> ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX up: <http://purl.uniprot.org/core/>
@@ -16,7 +16,7 @@ PREFIX cheminf: <http://semanticscience.org/resource/>
 
 SELECT ?compound
 WHERE {
-  SERVICE <https://sparql.uniprot.org/sparql/> {
+  SERVICE <https://sparql.uniprot.org/sparql> {
     VALUES ?uniprot { <http://purl.uniprot.org/uniprot/P59071> }
 
     ?uniprot a up:Protein ;
