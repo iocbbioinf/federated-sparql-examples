@@ -22,14 +22,20 @@ PREFIX disease: <http://purl.uniprot.org/core/disease/>
 PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
 
 SELECT ?DISEASE ?DISEASE_NAME (count(distinct ?PROTEIN) as ?HUMAN_PROTEIN_COUNT) WHERE {
-  SERVICE endpoint:chebi {
-    ?CHEBI sachem:substructureSearch [
-          sachem:query "C1C2(C3(CCC4(C(C3(CC=C2CC(C1)O))(CCC4(C(C)CCCC(C)C)))C))C" ].
-    }
+  # Rhea reactions involving cholesterol or its derivatives, computed first
+  # so that only their IRIs are sent on to UniProt
+  {
+    SELECT DISTINCT ?RHEA_REACTION WHERE {
+      SERVICE endpoint:chebi {
+        ?CHEBI sachem:substructureSearch [
+              sachem:query "C1C2(C3(CCC4(C(C3(CC=C2CC(C1)O))(CCC4(C(C)CCCC(C)C)))C))C" ].
+      }
 
-  ?RHEA_REACTION rdfs:subClassOf rh:Reaction.
-  ?RHEA_REACTION rh:status rh:Approved.
-  ?RHEA_REACTION rh:side / rh:contains / rh:compound / rh:chebi ?CHEBI .
+      ?RHEA_REACTION rdfs:subClassOf rh:Reaction.
+      ?RHEA_REACTION rh:status rh:Approved.
+      ?RHEA_REACTION rh:side / rh:contains / rh:compound / rh:chebi ?CHEBI .
+    }
+  }
 
   # UniProt endpoint service
   SERVICE <https://sparql.uniprot.org/sparql> {

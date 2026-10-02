@@ -20,16 +20,22 @@ PREFIX taxon:<http://purl.uniprot.org/taxonomy/>
 PREFIX keywords:<http://purl.uniprot.org/keywords/>
 
 SELECT distinct ?CHEBI ?CHEBI_UNIPROT_NAME ?RHEA_REACTION ?PROTEIN ?PROTEIN_FULL_NAME WHERE {
-  # endpoint:chebi service
-  SERVICE endpoint:chebi {
-    ?CHEBI sachem:substructureSearch [
-          sachem:query "C1C2(C3(CCC4(C(C3(CC=C2CC(C1)O))(CCC4(C(C)CCCC(C)C)))C))C" ].
-    }
+  # Rhea reactions involving cholesterol or its derivatives, computed first
+  # so that only their IRIs are sent on to UniProt
+  {
+    SELECT DISTINCT ?CHEBI ?CHEBI_UNIPROT_NAME ?RHEA_REACTION WHERE {
+      # endpoint:chebi service
+      SERVICE endpoint:chebi {
+        ?CHEBI sachem:substructureSearch [
+              sachem:query "C1C2(C3(CCC4(C(C3(CC=C2CC(C1)O))(CCC4(C(C)CCCC(C)C)))C))C" ].
+      }
 
-  ?RHEA_REACTION rdfs:subClassOf rh:Reaction .
-  ?RHEA_REACTION rh:status rh:Approved .
-  ?RHEA_REACTION rh:side / rh:contains / rh:compound / rh:chebi ?CHEBI .
-  ?CHEBI up:name ?CHEBI_UNIPROT_NAME .
+      ?RHEA_REACTION rdfs:subClassOf rh:Reaction .
+      ?RHEA_REACTION rh:status rh:Approved .
+      ?RHEA_REACTION rh:side / rh:contains / rh:compound / rh:chebi ?CHEBI .
+      ?CHEBI up:name ?CHEBI_UNIPROT_NAME .
+    }
+  }
 
   # UniProt service
   SERVICE <https://sparql.uniprot.org/sparql> {

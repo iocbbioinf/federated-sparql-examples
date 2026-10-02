@@ -21,15 +21,21 @@ PREFIX keywords:<http://purl.uniprot.org/keywords/>
 
 SELECT (count(distinct ?PROTEIN) AS ?HUMAN_PROTEIN_COUNT)
        (count(distinct ?RHEA_REACTION) AS ?RHEA_REACTION_COUNT) WHERE {
-  # endpoint:chebi service
-  SERVICE endpoint:chebi {
-      ?CHEBI sachem:substructureSearch [
-          sachem:query "C1C2(C3(CCC4(C(C3(CC=C2CC(C1)O))(CCC4(C(C)CCCC(C)C)))C))C" ].
-  }
+  # Rhea reactions involving cholesterol or its derivatives, computed first
+  # so that only their IRIs are sent on to UniProt
+  {
+    SELECT DISTINCT ?RHEA_REACTION WHERE {
+      # endpoint:chebi service
+      SERVICE endpoint:chebi {
+          ?CHEBI sachem:substructureSearch [
+              sachem:query "C1C2(C3(CCC4(C(C3(CC=C2CC(C1)O))(CCC4(C(C)CCCC(C)C)))C))C" ].
+      }
 
-  ?RHEA_REACTION rdfs:subClassOf rh:Reaction.
-  ?RHEA_REACTION rh:status rh:Approved.
-  ?RHEA_REACTION rh:side / rh:contains / rh:compound / rh:chebi ?CHEBI.
+      ?RHEA_REACTION rdfs:subClassOf rh:Reaction.
+      ?RHEA_REACTION rh:status rh:Approved.
+      ?RHEA_REACTION rh:side / rh:contains / rh:compound / rh:chebi ?CHEBI.
+    }
+  }
 
   # UniProt service
   SERVICE <https://sparql.uniprot.org/sparql> {
