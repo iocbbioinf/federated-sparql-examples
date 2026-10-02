@@ -16,16 +16,20 @@ PREFIX chemrof: <https://w3id.org/chemrof/>
 PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
 
 SELECT DISTINCT ?compound ?wdid ?label WHERE {
-  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
-    ?compound rdfs:subClassOf obo:CHEBI_35192 ;
-              chemrof:smiles_string ?smiles .
-    ?match sachem:substructureSearch [
-             sachem:query      ?smiles ;
-             sachem:searchMode sachem:exactSearch ] .
-    GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
-      ?match rdfs:seeAlso ?wdid .
+  {
+    SELECT ?compound ?wdid WHERE {
+      SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+        ?compound rdfs:subClassOf obo:CHEBI_35192 ;
+                  chemrof:smiles_string ?smiles .
+        ?match sachem:substructureSearch [
+                 sachem:query      ?smiles ;
+                 sachem:searchMode sachem:exactSearch ] .
+        GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+          ?match rdfs:seeAlso ?wdid .
+        }
+        FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
+      }
     }
-    FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
   }
   SERVICE <https://query.wikidata.org/sparql> {
     ?wdid rdfs:label ?label .

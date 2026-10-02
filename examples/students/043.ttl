@@ -16,15 +16,19 @@ PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
 
 SELECT ?compound ?score ?label WHERE {
 
-  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
-    [ sachem:compound ?compound ; sachem:score ?score ]
-        sachem:similaritySearch [
-          sachem:query  "CC(=O)OC1=CC=CC=C1C(=O)O" ;
-          sachem:cutoff "0.85"^^xsd:double ] .
-    GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
-      ?compound rdfs:seeAlso ?wdid .
+  {
+    SELECT ?compound ?score ?wdid WHERE {
+      SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+        [ sachem:compound ?compound ; sachem:score ?score ]
+            sachem:similaritySearch [
+              sachem:query  "CC(=O)OC1=CC=CC=C1C(=O)O" ;
+              sachem:cutoff "0.85"^^xsd:double ] .
+        GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+          ?compound rdfs:seeAlso ?wdid .
+        }
+        FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
+      }
     }
-    FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
   }
 
   SERVICE <https://query.wikidata.org/sparql> {
