@@ -28,7 +28,7 @@ WHERE {
           (up:enzyme | up:domain/up:enzyme | up:component/up:enzyme) ?enzyme .
       ?mouseProtein up:organism taxon:10090 ;
           (up:enzyme | up:domain/up:enzyme | up:component/up:enzyme) ?enzyme .
-      ?enzyme rdfs:subClassOf ec:1.-.-.- .
+      ?enzyme rdfs:subClassOf+ ec:1.-.-.- .
     }
   }
 

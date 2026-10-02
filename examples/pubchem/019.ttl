@@ -11,7 +11,7 @@ ex:019 a sh:SPARQLExecutable,
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX up: <http://purl.uniprot.org/core/>
-PREFIX pdbo: <http://rdf.wwpdb.org/schema/pdbx-v40.owl#>
+PREFIX pdbo: <http://rdf.wwpdb.org/schema/pdbx-v50.owl#>
 PREFIX cheminf: <http://semanticscience.org/resource/>
 
 SELECT ?compound
