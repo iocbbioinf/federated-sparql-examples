@@ -1,0 +1,70 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500101 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Give me all hydrolase (EC 3) inhibitors active <10 nM in both human and rat."@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:   <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX ec:    <http://purl.uniprot.org/enzyme/>
+PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX taxon: <http://purl.uniprot.org/taxonomy/>
+PREFIX up:    <http://purl.uniprot.org/core/>
+PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT
+       ?molecule
+       ?humanProtein ?humanType ?humanValue
+       ?ratProtein ?ratType ?ratValue
+WHERE {
+
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    SELECT DISTINCT ?humanProtein ?ratProtein WHERE {
+      ?humanProtein up:organism taxon:9606 ;
+          (up:enzyme | up:domain/up:enzyme | up:component/up:enzyme) ?enzyme .
+      ?ratProtein up:organism taxon:10116 ;
+          (up:enzyme | up:domain/up:enzyme | up:component/up:enzyme) ?enzyme .
+      ?enzyme rdfs:subClassOf+ ec:3.-.-.- .
+    }
+  }
+
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+
+    ?humanActivity a cco:Activity ;
+        cco:hasMolecule ?molecule ;
+        cco:hasAssay ?humanAssay ;
+        cco:standardType ?humanType ;
+        cco:standardValue ?humanValue ;
+        cco:standardUnits "nM" .
+
+    ?humanAssay
+        cco:hasTarget/
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?humanProtein .
+
+    ?ratActivity a cco:Activity ;
+        cco:hasMolecule ?molecule ;
+        cco:hasAssay ?ratAssay ;
+        cco:standardType ?ratType ;
+        cco:standardValue ?ratValue ;
+        cco:standardUnits "nM" .
+
+    ?ratAssay
+        cco:hasTarget/
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?ratProtein .
+
+    FILTER(xsd:decimal(?humanValue) < 10)
+    FILTER(xsd:decimal(?ratValue) < 10)
+
+    # Operational approximation of "inhibitor"
+    FILTER(?humanType IN ("IC50", "Ki"))
+    FILTER(?ratType IN ("IC50", "Ki"))
+  }
+}
+LIMIT 500""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

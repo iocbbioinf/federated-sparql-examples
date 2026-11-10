@@ -1,0 +1,47 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0100302 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How many experimentally determined structures, in total and by X-ray crystallography versus cryo-EM, does each human lipid-recognising GPCR have, and what is its Wikidata concept?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase:<http://wikiba.se/ontology#>
+PREFIX bd:      <http://www.bigdata.com/rdf#>
+
+SELECT ?ac ?mnemonic ?name ?wdItem ?wdLabel
+       (COUNT(DISTINCT ?pdb) AS ?nStructures)
+       (COUNT(DISTINCT IF(?method = up:X-Ray_Crystallography, ?pdb, ?none)) AS ?nXray)
+       (COUNT(DISTINCT IF(?method = up:Electron_Microscopy, ?pdb, ?none)) AS ?nEM)
+WHERE {
+  # ---- Leg 1 (UniProt): lipid-recognising human GPCRs that have structures.
+  #      This is the receptor class in which membrane-lateral ligand
+  #      entry/egress pathways are reported.
+  ?protein a up:Protein ;
+           up:organism <http://purl.uniprot.org/taxonomy/9606> ;
+           up:reviewed true ;
+           up:classifiedWith <http://purl.uniprot.org/keywords/297> ;   # GPCR
+           up:mnemonic ?mnemonic ;
+           up:recommendedName/up:fullName ?name ;
+           rdfs:seeAlso ?pdb .
+  ?pdb up:database <http://purl.uniprot.org/database/PDB> ; up:method ?method .
+  FILTER(REGEX(?name, "leukotriene|sphingosine|lysophosphatid|cannabinoid|prostagland|oxysterol|free fatty acid|platelet-activating", "i"))
+  BIND(STRAFTER(STR(?protein),"uniprot/") AS ?ac)
+
+  # ---- Leg 2 (Wikidata): cross-KG identity for the receptor.
+  OPTIONAL {
+    SERVICE <https://query.wikidata.org/sparql> {
+      ?wdItem wdt:P352 ?ac ; rdfs:label ?wdLabel .
+      FILTER(lang(?wdLabel) = "en")
+    }
+  }
+}
+GROUP BY ?ac ?mnemonic ?name ?wdItem ?wdLabel
+ORDER BY DESC(?nStructures) ?mnemonic""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

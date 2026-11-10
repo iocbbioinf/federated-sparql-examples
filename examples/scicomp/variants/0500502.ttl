@@ -1,0 +1,69 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500502 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "For targets related to Alzheimer's disease, how many distinct compounds with a known mechanism of action are there for each mechanism action type, and how many target proteins do they cover?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX wd:  <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT
+       ?action
+       (COUNT(DISTINCT ?compound) AS ?compoundCount)
+       (COUNT(DISTINCT ?protein) AS ?proteinCount)
+WHERE {
+
+  SERVICE <https://query.wikidata.org/sparql> {
+
+    VALUES ?disease {
+      wd:Q11081       # Alzheimer's disease
+    }
+
+    {
+      ?gene wdt:P2293 ?disease .
+    }
+    UNION
+    {
+      ?disease wdt:P2293 ?gene .
+    }
+    UNION
+    {
+      ?gene wdt:P1918 ?disease .
+    }
+
+    ?gene wdt:P688 ?proteinItem .
+    ?proteinItem wdt:P352 ?uniprotAccession .
+
+    BIND(
+      IRI(
+        CONCAT(
+          "http://purl.uniprot.org/uniprot/",
+          ?uniprotAccession
+        )
+      )
+      AS ?protein
+    )
+  }
+
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+
+    ?compound cco:hasMechanism ?mechanism .
+
+    ?mechanism cco:hasTarget ?target ;
+               cco:mechanismActionType ?action .
+
+    ?target
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?protein .
+  }
+}
+GROUP BY ?action
+ORDER BY DESC(?compoundCount)""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

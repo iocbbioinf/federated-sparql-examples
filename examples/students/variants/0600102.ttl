@@ -1,0 +1,39 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0600102 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which human proteins in UniProtKB/Swiss-Prot have magnesium(2+) as a cofactor?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX obo:     <http://purl.obolibrary.org/obo/>
+PREFIX chemrof: <https://w3id.org/chemrof/>
+PREFIX rh: <http://rdf.rhea-db.org/>
+PREFIX taxon: <http://purl.uniprot.org/taxonomy/>
+
+SELECT DISTINCT ?chebi ?protein WHERE {
+  
+  ?chebi oboInOwl:hasRelatedSynonym ?o .
+  ?chebi chemrof:smiles_string ?smiles
+  FILTER(LCASE(STR(?o)) = "magnesium(2+)")
+  
+     SERVICE <https://sparql.uniprot.org/sparql> {
+    SELECT ?chebi ?protein WHERE {
+      ?protein up:annotation ?ann ;
+               up:reviewed   true ;
+               up:organism   taxon:9606 .
+      ?ann a up:Cofactor_Annotation ;
+           up:cofactor ?chebi .         
+    }
+  }
+ }
+LIMIT 100""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

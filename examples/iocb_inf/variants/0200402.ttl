@@ -1,0 +1,93 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0200402 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "To which external databases does ChEMBL cross-reference its substances and assays, how many links go to each and with what cardinality, and how many external cross-reference links (rdfs:seeAlso) does UniProt hold for its proteins in comparison?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void: <http://rdfs.org/ns/void#>
+PREFIX cco:  <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX up:   <http://purl.uniprot.org/core/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# HOW WIDELY DOES CHEMBL CROSS-REFERENCE, AND WITH WHAT CARDINALITY?
+#
+# ChEMBL links every substance (cco:Substance, the superclass of all its
+# molecule types) to external chemical, drug and clinical resources through
+# cco:moleculeXref, and its assays to PubChem BioAssay through
+# cco:assayXref. Each external resource is modelled as its own reference
+# class (cco:PubchemRef, cco:BindingDbRef, cco:ClinicalTrialsRef, ...), so
+# one VoID linkset per class pair enumerates all of them with counts.
+#
+#     triples / distinctSubjects = objects per subject  (fan-out)
+#     triples / distinctObjects  = subjects per object  (fan-in)
+#
+# For comparison, UniProt keeps its cross-references to ~200 external
+# databases on the protein itself, as rdfs:seeAlso. UniProt publishes only
+# the triple count for that property partition (no distinct subject/object
+# counts), so its size is reported without a cardinality.
+
+SELECT DISTINCT ?linkFrom ?linkPredicate ?linkTo ?cardinality
+       ?triples ?distinctSubjects ?distinctObjects
+       ?objectsPerSubject ?subjectsPerObject
+WHERE {
+  {
+    # (A) LOCAL AT IDSM - every ChEMBL substance and assay cross-reference
+    #     linkset. A DISTINCT subselect collapses the several graph-scoped
+    #     linkset copies IDSM publishes for each identical class pair.
+    {
+      SELECT DISTINCT ?linkFrom ?linkPredicate ?linkTo
+                      ?triples ?distinctSubjects ?distinctObjects
+      WHERE {
+        GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+          ?linkset void:linkPredicate    ?linkPredicate ;
+                   void:subjectsTarget   ?subjectPart ;
+                   void:objectsTarget    ?objectPart ;
+                   void:triples          ?triples ;
+                   void:distinctSubjects ?distinctSubjects ;
+                   void:distinctObjects  ?distinctObjects .
+          ?subjectPart void:class ?linkFrom .
+          ?objectPart  void:class ?linkTo .
+          FILTER(?linkPredicate IN (cco:moleculeXref, cco:assayXref))
+        }
+        FILTER(?linkFrom IN (cco:Substance, cco:Assay))
+      }
+    }
+    # THE CARDINALITY RULE, applied to the published counts.
+    BIND(ROUND(1000.0 * ?triples / ?distinctSubjects) / 1000 AS ?objectsPerSubject)
+    BIND(ROUND(1000.0 * ?triples / ?distinctObjects)  / 1000 AS ?subjectsPerObject)
+    BIND(IF(?objectsPerSubject  < 1.05 && ?subjectsPerObject  < 1.05, "one-to-one",
+         IF(?objectsPerSubject >= 1.05 && ?subjectsPerObject  < 1.05, "one-to-many",
+         IF(?objectsPerSubject  < 1.05 && ?subjectsPerObject >= 1.05, "many-to-one",
+                                                                      "many-to-many")))
+         AS ?cardinality)
+  }
+  UNION
+  {
+    # (B) FEDERATED AT UNIPROT - the size of UniProt's protein ->
+    #     external-database cross-reference partition (rdfs:seeAlso).
+    #     NOTE: IDSM refuses a SELECT DISTINCT inside SERVICE ("the SERVICE
+    #     pattern cannot be evaluated"), so this is written as plain triple
+    #     patterns and de-duplicated by the outer DISTINCT.
+    SERVICE <https://sparql.uniprot.org/sparql> {
+      GRAPH <https://sparql.uniprot.org/.well-known/void> {
+        ?classPart void:class             ?linkFrom ;
+                   void:propertyPartition ?propPart .
+        ?propPart void:property ?linkPredicate ;
+                  void:triples  ?triples .
+      }
+      FILTER(?linkFrom = up:Protein)
+      FILTER(?linkPredicate = rdfs:seeAlso)
+    }
+    BIND(up:Database AS ?linkTo)
+    BIND("not derivable - UniProt publishes no distinct subject/object counts"
+         AS ?cardinality)
+  }
+}
+ORDER BY DESC(?triples)
+""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

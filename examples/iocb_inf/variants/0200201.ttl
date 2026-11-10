@@ -1,0 +1,96 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0200201 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Where can I access ChEBI programmatically: which SPARQL endpoints (UniProt, Rhea, IDSM) serve it as a named graph, and what URL template resolves a single ChEBI record?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql>,
+        <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+# WHERE CAN I QUERY CHEBI?
+#
+# ChEBI is not run as a SPARQL endpoint of its own, but it is mirrored as a
+# named graph by several endpoints in this federation. Each endpoint's
+# service description lists the named graphs it serves, so the copies can
+# be discovered rather than assumed:
+#
+#   SPARQL protocol  - UniProt, Rhea and IDSM each publish sd:Service with
+#                      sd:endpoint and the sd:name of every named graph.
+#   REST / resolvable - UniProt's cross-reference registry gives the
+#                      up:urlTemplate for a single ChEBI record.
+
+SELECT ?endpointOrTemplate ?accessRoute ?chebiGraph
+       (GROUP_CONCAT(DISTINCT STR(?queryLanguage); separator=", ") AS ?queryLanguages)
+WHERE {
+  {
+    # (A) UNIPROT: the ChEBI graph listed in its own VoID graph.
+    GRAPH <https://sparql.uniprot.org/.well-known/void> {
+      ?service a sd:Service ;
+               sd:endpoint          ?endpointOrTemplate ;
+               sd:supportedLanguage ?queryLanguage .
+      ?graphDesc sd:name ?chebiGraph .
+    }
+    FILTER(CONTAINS(LCASE(STR(?chebiGraph)), "chebi"))
+    BIND("SPARQL 1.1 protocol" AS ?accessRoute)
+  }
+  UNION
+  {
+    # (B) RHEA: same discovery, over federation, from Rhea's own VoID.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+        ?service a sd:Service ;
+                 sd:endpoint          ?endpointOrTemplate ;
+                 sd:supportedLanguage ?queryLanguage .
+        ?graphDesc sd:name ?chebiGraph .
+      }
+      FILTER(CONTAINS(LCASE(STR(?chebiGraph)), "chebi"))
+    }
+    BIND("SPARQL 1.1 protocol (federated SERVICE)" AS ?accessRoute)
+  }
+  UNION
+  {
+    # (C) REST / resolvable-URL access to one ChEBI record, taken from
+    #     UniProt's machine-readable cross-reference registry.
+    GRAPH <http://sparql.uniprot.org/database> {
+      ?db a up:Database ;
+          up:abbreviation "ChEBI" ;
+          up:urlTemplate  ?endpointOrTemplate .
+    }
+    BIND("REST / resolvable URL - substitute the ChEBI ID for %s" AS ?accessRoute)
+  }
+  UNION
+  {
+    # (D) IDSM: the ChEBI graph among IDSM's local named graphs, read from
+    #     IDSM's VoID.
+    # NOTE: STRSTARTS over these graph names crashes IDSM
+    #       (NullPointerException), so the graph is selected with CONTAINS.
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+      SELECT ?endpointOrTemplate ?queryLanguage ?chebiGraph
+      WHERE {
+        GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+          ?service a sd:Service ;
+                   sd:endpoint          ?endpointOrTemplate ;
+                   sd:supportedLanguage ?queryLanguage ;
+                   sd:availableGraphs   ?graphCollection .
+          ?graphCollection sd:namedGraph ?ng .
+          ?ng sd:name ?chebiGraph .
+        }
+        FILTER(CONTAINS(STR(?chebiGraph), "chebi"))
+      }
+    }
+    BIND("SPARQL 1.1 protocol (local named graph at IDSM)" AS ?accessRoute)
+  }
+}
+GROUP BY ?endpointOrTemplate ?accessRoute ?chebiGraph
+ORDER BY ?accessRoute ?endpointOrTemplate
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

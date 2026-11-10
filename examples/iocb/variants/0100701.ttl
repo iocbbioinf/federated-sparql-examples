@@ -1,0 +1,56 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0100701 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which boron-containing drugs are approved or in clinical development, what are their structures (SMILES) and parent compounds, and what is the corresponding Wikidata concept?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco:     <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sio:     <http://semanticscience.org/resource/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+
+SELECT DISTINCT ?chemblId ?molName ?phase ?smiles ?parentName ?wdItem ?wdLabel
+WHERE {
+  GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+    ?mol cco:chemblId ?chemblId ;
+         rdfs:label   ?molName ;
+         cco:highestDevelopmentPhase ?phase .
+
+    # In medical development / testing (any clinical phase, or approved).
+    FILTER(?phase >= 1)
+
+    # BORON-CONTAINING: a boron atom "B" in the canonical SMILES. The symbol
+    # must not be followed by r/a/e/i, which would make it bromine (Br),
+    # barium (Ba), beryllium (Be) or bismuth (Bi) instead.
+    ?mol sio:SIO_000008 [ a sio:CHEMINF_000018 ; sio:SIO_000300 ?smiles ] .
+    FILTER(REGEX(?smiles, "B([^raei]|$)"))
+
+    # ChEMBL links a salt/ester form to its parent structure. Where present,
+    # this names the parent boron compound.
+    OPTIONAL {
+      ?mol cco:hasParentMolecule ?parent .
+      ?parent rdfs:label ?parentName .
+      OPTIONAL { ?parent cco:highestDevelopmentPhase ?parentPhase }
+    }
+  }
+
+  # Cross-KG identity for the boron-containing drug: Wikidata concept + label,
+  # bridged on the ChEMBL id (P592). Wikidata is queried in its own
+  # subselect so the remote result is materialised once.
+  OPTIONAL {
+    { SELECT ?chemblId ?wdItem ?wdLabel WHERE {
+        SERVICE <https://query.wikidata.org/sparql> {
+          ?wdItem wdt:P592 ?chemblId ; rdfs:label ?wdLabel .
+          FILTER(lang(?wdLabel) = "en")
+        }
+    } }
+  }
+}
+ORDER BY DESC(?phase) ?molName""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

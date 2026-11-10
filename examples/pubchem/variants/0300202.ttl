@@ -1,0 +1,34 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0300202 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which PubChem compounds correspond to the substrates on the left-hand side of the Rhea reaction RHEA:10020 (L-saccharopine + NADP(+) + H2O = (S)-2-amino-6-oxohexanoate + L-glutamate + NADPH + H(+)), and what are their Rhea names?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rh: <http://rdf.rhea-db.org/>
+
+SELECT DISTINCT ?compound ?name
+WHERE {
+  SERVICE <https://sparql.rhea-db.org/sparql> {
+    VALUES ?rhea { rh:10020 }
+
+    ?rhea rdfs:subClassOf rh:Reaction .
+    ?rhea rh:equation ?equation .
+    ?rhea rh:side ?side .
+    ?side rh:contains/rh:compound ?cmpd .
+    FILTER (STRENDS(STR(?side), "_L"))
+
+    ?cmpd rh:name ?name .
+    ?cmpd (rh:chebi|(rh:reactivePart/rh:chebi)|(rh:underlyingChebi/rh:chebi)) ?chebi .
+  }
+
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+    ?compound a ?chebi .
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

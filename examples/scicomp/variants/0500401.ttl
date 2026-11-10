@@ -1,0 +1,74 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500401 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Among the 20 ChEMBL compounds most similar to gefitinib (including gefitinib itself), which target proteins do they inhibit with an IC50 below 100 nM?"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/chembl> ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT
+       ?compound
+       ?similarity
+       ?protein
+       ?proteinName
+       ?value
+WHERE {
+
+  # The chemistry + bioactivity side is computed first and capped, so only a
+  # small, bounded set of ?protein values is sent to UniProt.
+  {
+    SELECT DISTINCT ?compound ?similarity ?protein ?value
+    WHERE {
+    # Sachem similarity search over ChEMBL structures. The query structure is
+    # gefitinib (PubChem CID 123631, ChEMBL939).
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/chembl> {
+      [
+        sachem:compound ?compound ;
+        sachem:score ?similarity
+      ]
+      sachem:similaritySearch [
+        sachem:query "COC1=C(C=C2C(=C1)N=CN=C2NC3=CC(=C(C=C3)F)Cl)OCCCN4CCOCC4" ;
+        sachem:topn 20
+      ] .
+    }
+
+    # Potent IC50 activities of those similar compounds, and the target
+    # component each assay maps to.
+    GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+      ?activity a cco:Activity ;
+          cco:hasMolecule ?compound ;
+          cco:hasAssay ?assay ;
+          cco:standardType "IC50" ;
+          cco:standardValue ?value ;
+          cco:standardUnits "nM" .
+
+      ?assay
+          cco:hasTarget/
+          cco:hasTargetComponent/
+          cco:targetCmptXref ?protein .
+
+      FILTER(xsd:decimal(?value) < 100)
+      FILTER(STRSTARTS(STR(?protein), "http://purl.uniprot.org/uniprot/"))
+    }
+
+    }
+    LIMIT 200
+  }
+
+  # UniProt leg: recommended full name for each of those target proteins.
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    ?protein up:recommendedName/up:fullName ?proteinName .
+  }
+}
+ORDER BY DESC(?similarity) ?value
+LIMIT 200""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

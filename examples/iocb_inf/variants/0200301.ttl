@@ -1,0 +1,73 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0200301 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which literal datatypes are used in the data served by UniProt, Rhea and IDSM (PubChem, ChEMBL and others), and in how many datatype partitions does each datatype occur per endpoint?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql>,
+        <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX voidext: <http://ldf.fi/void-ext#>
+
+# WHICH VALUE FORMATS OCCUR IN THE DATA?
+#
+# VoID-ext datatype partitions record, for each property partition, which
+# literal datatypes its values actually use (xsd:string, xsd:int,
+# rdf:langString, ...). Counting the partitions per datatype shows how
+# common each value format is in an endpoint's data. All three endpoints
+# publish these partitions in their own /.well-known/void graph, so the
+# value formats of UniProt, Rhea and IDSM can be compared side by side.
+# Each datatype IRI dereferences to its specification (XSD or RDF).
+
+SELECT ?database ?datatype ?nPartitions ?documentation
+WHERE {
+  {
+    # (A) UNIPROT, from its own VoID graph.
+    {
+      SELECT ?datatype (COUNT(*) AS ?nPartitions) WHERE {
+        GRAPH <https://sparql.uniprot.org/.well-known/void> {
+          ?part voidext:datatypePartition/voidext:datatype ?datatype .
+        }
+      }
+      GROUP BY ?datatype
+    }
+    BIND("UniProt" AS ?database)
+  }
+  UNION
+  {
+    # (B) RHEA, the same count over federation from Rhea's VoID graph.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      SELECT ?datatype (COUNT(*) AS ?nPartitions) WHERE {
+        GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+          ?part voidext:datatypePartition/voidext:datatype ?datatype .
+        }
+      }
+      GROUP BY ?datatype
+    }
+    BIND("Rhea" AS ?database)
+  }
+  UNION
+  {
+    # (C) IDSM - PubChem, ChEMBL, ChEBI, MeSH and the other graphs it hosts.
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+      SELECT ?datatype (COUNT(*) AS ?nPartitions) WHERE {
+        GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+          ?part voidext:datatypePartition/voidext:datatype ?datatype .
+        }
+      }
+      GROUP BY ?datatype
+    }
+    BIND("IDSM (PubChem, ChEMBL, ...)" AS ?database)
+  }
+  # The datatype IRI is the pointer to its own specification.
+  BIND(?datatype AS ?documentation)
+}
+ORDER BY ?database DESC(?nPartitions)
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

@@ -1,0 +1,66 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500402 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Among the 20 ChEMBL compounds most similar to imatinib, which target proteins are hit most often, i.e. how many of these compounds have a reported activity against each protein?"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/chembl> ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX up: <http://purl.uniprot.org/core/>
+
+SELECT
+       ?protein
+       ?proteinName
+       ?compoundCount
+WHERE {
+
+  # The chemistry + bioactivity side is computed and aggregated first, so only
+  # a small, bounded set of ?protein values is sent to UniProt.
+  {
+    SELECT ?protein (COUNT(DISTINCT ?compound) AS ?compoundCount)
+    WHERE {
+    # Sachem similarity search over ChEMBL structures. The query structure is
+    # imatinib (PubChem CID 5291, ChEMBL941).
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/chembl> {
+      [
+        sachem:compound ?compound ;
+        sachem:score ?similarity
+      ]
+      sachem:similaritySearch [
+        sachem:query "CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC=C5" ;
+        sachem:topn 20
+      ] .
+    }
+
+    # Reported activities of those similar compounds, and the target component
+    # each assay maps to.
+    GRAPH <http://rdf.ebi.ac.uk/dataset/chembl> {
+      ?activity a cco:Activity ;
+          cco:hasMolecule ?compound ;
+          cco:hasAssay ?assay .
+
+      ?assay
+          cco:hasTarget/
+          cco:hasTargetComponent/
+          cco:targetCmptXref ?protein .
+
+      FILTER(STRSTARTS(STR(?protein), "http://purl.uniprot.org/uniprot/"))
+    }
+
+    }
+    GROUP BY ?protein
+  }
+
+  # UniProt leg: recommended full name for each of those target proteins.
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    ?protein up:recommendedName/up:fullName ?proteinName .
+  }
+}
+ORDER BY DESC(?compoundCount)""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

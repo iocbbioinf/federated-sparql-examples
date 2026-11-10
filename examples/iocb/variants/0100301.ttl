@@ -1,0 +1,44 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0100301 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which human chemokine receptors (GPCRs) have structures determined by cryo-electron microscopy, and what are their Wikidata concepts?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase:<http://wikiba.se/ontology#>
+PREFIX bd:      <http://www.bigdata.com/rdf#>
+
+SELECT ?ac ?mnemonic ?name ?pdbid ?method ?wdItem ?wdLabel
+WHERE {
+  # ---- Leg 1 (UniProt): human chemokine-receptor GPCRs that have
+  #      structures solved by cryo-electron microscopy.
+  ?protein a up:Protein ;
+           up:organism <http://purl.uniprot.org/taxonomy/9606> ;
+           up:reviewed true ;
+           up:classifiedWith <http://purl.uniprot.org/keywords/297> ;   # GPCR
+           up:mnemonic ?mnemonic ;
+           up:recommendedName/up:fullName ?name ;
+           rdfs:seeAlso ?pdb .
+  ?pdb up:database <http://purl.uniprot.org/database/PDB> ; up:method ?method .
+  FILTER(?method = up:Electron_Microscopy)
+  FILTER(CONTAINS(LCASE(?name), "chemokine"))
+  BIND(STRAFTER(STR(?protein),"uniprot/") AS ?ac)
+  BIND(STRAFTER(STR(?pdb),"pdb/")        AS ?pdbid)
+
+  # ---- Leg 2 (Wikidata): cross-KG identity for the receptor.
+  OPTIONAL {
+    SERVICE <https://query.wikidata.org/sparql> {
+      ?wdItem wdt:P352 ?ac ; rdfs:label ?wdLabel .
+      FILTER(lang(?wdLabel) = "en")
+    }
+  }
+}
+ORDER BY ?mnemonic ?pdbid""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

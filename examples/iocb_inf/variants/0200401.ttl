@@ -1,0 +1,102 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0200401 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How are small molecules interconnected between ChEMBL and chemical/biochemical databases such as ChEBI, Rhea, DrugBank, HMDB, LIPID MAPS and SwissLipids, what is the cardinality of each ChEMBL small-molecule mapping, and how large are UniProt's links from catalytic activities to Rhea reactions and from cofactor annotations to ChEBI?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void: <http://rdfs.org/ns/void#>
+PREFIX cco:  <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX up:   <http://purl.uniprot.org/core/>
+
+# HOW ARE SMALL MOLECULES INTERCONNECTED, AND WITH WHAT CARDINALITY?
+#
+# The protein-centred view links resources through the UniProtKB accession;
+# the chemistry-centred view links them through the small molecule. ChEMBL
+# attaches to every cco:SmallMolecule cross-references (cco:moleculeXref)
+# into ChEBI, Rhea, DrugBank, HMDB, LIPID MAPS and SwissLipids, while
+# UniProt reaches the same chemical space from the protein side: catalytic
+# activities point to Rhea reactions, cofactor annotations to ChEBI.
+#
+# A VoID linkset records, for ONE predicate joining ONE pair of classes, the
+# number of triples and of DISTINCT subjects and objects. These determine
+# the cardinality:
+#
+#     triples / distinctSubjects = objects per subject  (fan-out)
+#     triples / distinctObjects  = subjects per object  (fan-in)
+#
+# CAVEAT for part (B): UniProt publishes no distinctSubjects/distinctObjects
+# for these property partitions, so its links are counted but no ratio is
+# derived.
+
+SELECT DISTINCT ?linkFrom ?linkPredicate ?linkTo ?cardinality
+       ?triples ?distinctSubjects ?distinctObjects
+       ?objectsPerSubject ?subjectsPerObject
+WHERE {
+  {
+    # (A) LOCAL AT IDSM - ChEMBL small-molecule cross-reference linksets.
+    #     A DISTINCT subselect collapses the several graph-scoped linkset
+    #     copies IDSM publishes for each identical class pair.
+    {
+      SELECT DISTINCT ?linkFrom ?linkPredicate ?linkTo
+                      ?triples ?distinctSubjects ?distinctObjects
+      WHERE {
+        GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+          ?linkset void:linkPredicate    ?linkPredicate ;
+                   void:subjectsTarget   ?subjectPart ;
+                   void:objectsTarget    ?objectPart ;
+                   void:triples          ?triples ;
+                   void:distinctSubjects ?distinctSubjects ;
+                   void:distinctObjects  ?distinctObjects .
+          ?subjectPart void:class ?linkFrom .
+          ?objectPart  void:class ?linkTo .
+          FILTER(?linkPredicate = cco:moleculeXref)
+        }
+        # Only small molecules, and only the chemical databases asked about.
+        FILTER(?linkFrom = cco:SmallMolecule)
+        FILTER(?linkTo IN (cco:ChebiRef, cco:RheaRef, cco:DrugbankRef,
+                           cco:HmdbRef, cco:LipidMapsRef, cco:SwissLipidsRef))
+      }
+    }
+    # THE CARDINALITY RULE, applied to the published counts.
+    BIND(ROUND(1000.0 * ?triples / ?distinctSubjects) / 1000 AS ?objectsPerSubject)
+    BIND(ROUND(1000.0 * ?triples / ?distinctObjects)  / 1000 AS ?subjectsPerObject)
+    BIND(IF(?objectsPerSubject  < 1.05 && ?subjectsPerObject  < 1.05, "one-to-one",
+         IF(?objectsPerSubject >= 1.05 && ?subjectsPerObject  < 1.05, "one-to-many",
+         IF(?objectsPerSubject  < 1.05 && ?subjectsPerObject >= 1.05, "many-to-one",
+                                                                      "many-to-many")))
+         AS ?cardinality)
+  }
+  UNION
+  {
+    # (B) FEDERATED AT UNIPROT - UniProt's own links into chemistry:
+    #     catalytic activity -> Rhea reaction, cofactor annotation -> ChEBI.
+    #     Their SIZE is published (void:triples on the property partition of
+    #     the owning class); the ratio is left unbound (see caveat above).
+    #     NOTE: IDSM refuses a SELECT DISTINCT inside SERVICE ("the SERVICE
+    #     pattern cannot be evaluated"), so this is written as plain triple
+    #     patterns and de-duplicated by the outer DISTINCT.
+    SERVICE <https://sparql.uniprot.org/sparql> {
+      GRAPH <https://sparql.uniprot.org/.well-known/void> {
+        ?classPart void:class             ?linkFrom ;
+                   void:propertyPartition ?propPart .
+        ?propPart void:property ?linkPredicate ;
+                  void:triples  ?triples .
+      }
+      FILTER(?linkFrom IN (up:Catalytic_Activity, up:Cofactor_Annotation))
+      FILTER(?linkPredicate IN (up:catalyzedReaction, up:cofactor))
+    }
+    BIND(IF(?linkPredicate = up:catalyzedReaction,
+            <http://rdf.rhea-db.org/Reaction>,
+            <http://purl.obolibrary.org/obo/CHEBI_23367>) AS ?linkTo)
+    BIND("not derivable - UniProt publishes no distinct subject/object counts"
+         AS ?cardinality)
+  }
+}
+ORDER BY ?cardinality ?linkTo ?linkFrom
+""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

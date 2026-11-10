@@ -1,0 +1,29 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0300802 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "What are the PubChem preferred labels of the compounds that Wikidata lists as treating type 2 diabetes (Q3025883)?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?wdent ?compound ?label
+WHERE {
+  SERVICE <https://query.wikidata.org/sparql> {
+    ?wdent wdt:P2175 wd:Q3025883 ;
+           wdt:P662 ?cid .
+  }
+
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+    ?compound dcterms:identifier ?cid ;
+              skos:prefLabel ?label .
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

@@ -1,0 +1,88 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500501 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which compounds act as inhibitors, antagonists, blockers or negative modulators of targets related to Huntington's disease, amyotrophic lateral sclerosis or multiple sclerosis?"@en ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX wd:  <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT
+       ?disease
+       ?gene
+       ?protein
+       ?compound
+       ?compoundLabel
+       ?action
+WHERE {
+
+  SERVICE <https://query.wikidata.org/sparql> {
+
+    VALUES ?disease {
+      wd:Q190564      # Huntington's disease
+      wd:Q206901      # amyotrophic lateral sclerosis
+      wd:Q8277        # multiple sclerosis
+    }
+
+    {
+      ?gene wdt:P2293 ?disease .
+    }
+    UNION
+    {
+      ?disease wdt:P2293 ?gene .
+    }
+    UNION
+    {
+      ?gene wdt:P1918 ?disease .
+    }
+
+    ?gene wdt:P688 ?proteinItem .
+    ?proteinItem wdt:P352 ?uniprotAccession .
+
+    BIND(
+      IRI(
+        CONCAT(
+          "http://purl.uniprot.org/uniprot/",
+          ?uniprotAccession
+        )
+      )
+      AS ?protein
+    )
+  }
+
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+
+    ?compound cco:hasMechanism ?mechanism .
+
+    ?mechanism cco:hasTarget ?target ;
+               cco:mechanismActionType ?action .
+
+    ?target
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?protein .
+
+    # "Inhibitor" = a negative-direction mechanism, given as an enumerated list
+    # of ChEMBL action types.
+    FILTER(?action IN (
+      "INHIBITOR",
+      "ANTAGONIST",
+      "INVERSE AGONIST",
+      "NEGATIVE ALLOSTERIC MODULATOR",
+      "NEGATIVE MODULATOR",
+      "BLOCKER",
+      "ALLOSTERIC ANTAGONIST"
+    ))
+
+    OPTIONAL {
+      ?compound rdfs:label ?compoundLabel .
+    }
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

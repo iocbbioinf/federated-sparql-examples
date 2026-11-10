@@ -1,0 +1,71 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0200102 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "How large are the UniProt and Rhea SPARQL endpoints in total: how many named graphs does each serve, how many triples do they hold altogether, and which is the largest graph?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+
+# HOW BIG ARE UNIPROT AND RHEA, IN TOTAL?
+#
+# The same VoID statistics as a per-graph inventory, rolled up to one row
+# per endpoint. Each named graph is a void:Dataset carrying void:triples;
+# summing them gives the size of the whole endpoint, and the graph with the
+# highest count is reported as its largest data collection. Every number is
+# read from the VoID graph that each endpoint serves about itself.
+
+SELECT ?database
+       (COUNT(DISTINCT ?dataCollection) AS ?nNamedGraphs)
+       (SUM(?triples) AS ?totalTriples)
+       (MAX(?triples) AS ?largestGraphTriples)
+       (SAMPLE(?largest) AS ?largestGraph)
+WHERE {
+  {
+    # (A) UNIPROT, read from its own VoID graph. The inner subselect finds
+    #     the size of the largest graph so that its name can be reported.
+    GRAPH <https://sparql.uniprot.org/.well-known/void> {
+      ?graphDesc sd:name ?dataCollection ;
+                 sd:graph ?stats .
+      ?stats void:triples ?triples .
+    }
+    {
+      SELECT ?largest WHERE {
+        GRAPH <https://sparql.uniprot.org/.well-known/void> {
+          ?gd sd:name ?largest ; sd:graph/void:triples ?t .
+        }
+      }
+      ORDER BY DESC(?t) LIMIT 1
+    }
+    BIND("UniProt" AS ?database)
+  }
+  UNION
+  {
+    # (B) RHEA, over federation, from its own VoID graph in the same shape.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+        ?graphDesc sd:name ?dataCollection ;
+                   sd:graph ?stats .
+        ?stats void:triples ?triples .
+      }
+      {
+        SELECT ?largest WHERE {
+          GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+            ?gd sd:name ?largest ; sd:graph/void:triples ?t .
+          }
+        }
+        ORDER BY DESC(?t) LIMIT 1
+      }
+    }
+    BIND("Rhea" AS ?database)
+  }
+}
+GROUP BY ?database
+ORDER BY DESC(?totalTriples)
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

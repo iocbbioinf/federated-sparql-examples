@@ -1,0 +1,54 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500201 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which compounds inhibit human EGFR (epidermal growth factor receptor, UniProt P00533) with an IC50 below 1 nM?"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT
+       ?compound
+       ?compoundLabel
+       ?value
+       ?assay
+WHERE {
+
+  VALUES ?protein {
+    uniprot:P00533
+  }
+
+  ?protein a up:Protein .
+
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+
+    ?activity a cco:Activity ;
+        cco:hasMolecule ?compound ;
+        cco:hasAssay ?assay ;
+        cco:standardType "IC50" ;
+        cco:standardValue ?value ;
+        cco:standardUnits "nM" .
+
+    ?assay cco:hasTarget ?target .
+
+    ?target
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?protein .
+
+    FILTER(xsd:decimal(?value) < 1)
+
+    OPTIONAL {
+      ?compound rdfs:label ?compoundLabel .
+    }
+  }
+}
+ORDER BY ?value""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

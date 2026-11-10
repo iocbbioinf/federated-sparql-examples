@@ -1,0 +1,86 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0200101 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "For each named graph in UniProt and Rhea, which property (other than rdf:type) is used in the most triples, and how many triples is that?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+# WHAT IS THE DOMINANT PROPERTY OF EACH UNIPROT AND RHEA GRAPH?
+#
+# Every row is read out of the VoID description that each endpoint serves
+# at its own /.well-known/void graph. Each named graph is a void:Dataset
+# with graph-level void:propertyPartition entries; each partition gives one
+# property and the number of triples that use it. The property with the
+# highest count is what a graph is mostly "made of". rdf:type is left out
+# because it tops almost every graph and says little about its content.
+
+SELECT ?database ?dataCollection ?topProperty ?triples
+WHERE {
+  {
+    # (A) UNIPROT, graph by graph, read from its own VoID graph.
+    #     A subselect finds the largest partition per graph; the outer
+    #     pattern then looks up which property that partition belongs to.
+    {
+      SELECT ?dataCollection (MAX(?t) AS ?triples) WHERE {
+        GRAPH <https://sparql.uniprot.org/.well-known/void> {
+          ?graphDesc sd:name ?dataCollection ;
+                     sd:graph ?stats .
+          ?stats void:propertyPartition ?pp .
+          ?pp void:property ?p ;
+              void:triples  ?t .
+          FILTER(?p != rdf:type)
+        }
+      }
+      GROUP BY ?dataCollection
+    }
+    GRAPH <https://sparql.uniprot.org/.well-known/void> {
+      ?graphDesc sd:name ?dataCollection ;
+                 sd:graph ?stats .
+      ?stats void:propertyPartition ?pp .
+      ?pp void:property ?topProperty ;
+          void:triples  ?triples .
+      FILTER(?topProperty != rdf:type)
+    }
+    BIND("UniProt" AS ?database)
+  }
+  UNION
+  {
+    # (B) RHEA answers the same question over federation, from its own
+    #     VoID graph in exactly the same shape.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      {
+        SELECT ?dataCollection (MAX(?t) AS ?triples) WHERE {
+          GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+            ?graphDesc sd:name ?dataCollection ;
+                       sd:graph ?stats .
+            ?stats void:propertyPartition ?pp .
+            ?pp void:property ?p ;
+                void:triples  ?t .
+            FILTER(?p != rdf:type)
+          }
+        }
+        GROUP BY ?dataCollection
+      }
+      GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+        ?graphDesc sd:name ?dataCollection ;
+                   sd:graph ?stats .
+        ?stats void:propertyPartition ?pp .
+        ?pp void:property ?topProperty ;
+            void:triples  ?triples .
+        FILTER(?topProperty != rdf:type)
+      }
+    }
+    BIND("Rhea" AS ?database)
+  }
+}
+ORDER BY DESC(?triples) ?database ?dataCollection
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

@@ -36,9 +36,14 @@ GROUP BY ?sq ?question ?query ?local_KG
 """
 
 
+def example_files(examples_dir: Path) -> list[Path]:
+    """Example files in each subfolder and in its variants/ subfolder."""
+    return sorted([*examples_dir.glob("*/*.ttl"), *examples_dir.glob("*/variants/*.ttl")])
+
+
 def load_examples(examples_dir: Path) -> Graph:
     graph = Graph()
-    for path in sorted(examples_dir.glob("*/*.ttl")):
+    for path in example_files(examples_dir):
         graph.parse(path, format="turtle")
     return graph
 
@@ -79,7 +84,7 @@ if __name__ == "__main__":
 
     graph = load_examples(EXAMPLES_DIR)
     examples = sorted(graph.query(QUERY), key=lambda row: str(row.sq))
-    print(f"{len(examples)} examples retrieved from {len(list(EXAMPLES_DIR.glob('*/*.ttl')))} files.")
+    print(f"{len(examples)} examples retrieved from {len(example_files(EXAMPLES_DIR))} files.")
 
     problems = []
     for i, row in enumerate(examples, 1):

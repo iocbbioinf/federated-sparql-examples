@@ -1,0 +1,31 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0300302 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which glycan motifs (GlyTouCan ID and IUPAC condensed sequence) does Glycosmos annotate for the glycan structure (SID 252275760) in PubChem?"@en ;
+    spex:federatesWith <https://ts.glycosmos.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX substance: <http://rdf.ncbi.nlm.nih.gov/pubchem/substance/>
+PREFIX glycan: <http://purl.jp/bio/12/glyco/glycan#>
+
+SELECT DISTINCT ?motifid ?iupac
+WHERE {
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/substance> {
+    substance:SID252275760 rdfs:seeAlso ?glycan .
+  }
+
+  SERVICE <https://ts.glycosmos.org/sparql> {
+    ?glycan glycan:has_motif ?motif .
+    ?motif dcterms:identifier ?motifid ;
+           glycan:has_glycosequence ?gs .
+    ?gs glycan:in_carbohydrate_format glycan:carbohydrate_format_iupac_condensed ;
+        glycan:has_sequence ?iupac .
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

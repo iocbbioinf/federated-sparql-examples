@@ -1,0 +1,55 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500301 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which reviewed UniProt proteins does imatinib (ChEMBL941) bind with a Kd below 100 nM in binding assays?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX chembl_molecule: <http://rdf.ebi.ac.uk/resource/chembl/molecule/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT
+       ?protein
+       ?proteinName
+       ?value
+WHERE {
+
+  {
+    SELECT DISTINCT ?protein ?value
+    WHERE {
+      ?activity a cco:Activity ;
+          cco:hasMolecule chembl_molecule:CHEMBL941 ;
+          cco:hasAssay ?assay ;
+          cco:standardType "Kd" ;
+          cco:standardValue ?value ;
+          cco:standardUnits "nM" .
+
+      ?assay cco:assayType "Binding" ;
+             cco:hasTarget ?target .
+
+      ?target
+          cco:hasTargetComponent/
+          cco:targetCmptXref ?protein .
+
+      FILTER(xsd:decimal(?value) < 100)
+      FILTER(STRSTARTS(STR(?protein), "http://purl.uniprot.org/uniprot/"))
+    }
+  }
+
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    SELECT ?protein ?proteinName WHERE {
+      ?protein a up:Protein ;
+               up:reviewed true ;
+               up:recommendedName/up:fullName ?proteinName .
+    }
+  }
+}
+ORDER BY ?value""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

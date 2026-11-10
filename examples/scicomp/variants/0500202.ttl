@@ -1,0 +1,45 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500202 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "For human beta-2 adrenergic receptor (ADRB2, UniProt P07550), how many distinct compounds and activity measurements are reported for each activity type?"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX up: <http://purl.uniprot.org/core/>
+PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
+
+SELECT
+       ?activityType
+       (COUNT(DISTINCT ?compound) AS ?compoundCount)
+       (COUNT(DISTINCT ?activity) AS ?activityCount)
+WHERE {
+
+  VALUES ?protein {
+    uniprot:P07550
+  }
+
+  ?protein a up:Protein .
+
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+
+    ?activity a cco:Activity ;
+        cco:hasMolecule ?compound ;
+        cco:hasAssay ?assay ;
+        cco:standardType ?activityType .
+
+    ?assay cco:hasTarget ?target .
+
+    ?target
+        cco:hasTargetComponent/
+        cco:targetCmptXref ?protein .
+  }
+}
+GROUP BY ?activityType
+ORDER BY DESC(?compoundCount)""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

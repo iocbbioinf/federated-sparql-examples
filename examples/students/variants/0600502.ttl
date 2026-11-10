@@ -1,0 +1,35 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0600502 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "For each Wikidata compound matching nicotine, anabasine or cytisine (including stereoisomers), how many taxa are known to produce it?"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/wikidata> ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sachem:  <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+
+SELECT ?wd (SAMPLE(?compoundLabel) AS ?label) (COUNT(DISTINCT ?taxon) AS ?taxonCount) WHERE {
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/wikidata> {
+    VALUES ?smiles {
+      "CN1CCCC1C2=CN=CC=C2"
+      "C1CCNC(C1)C2=CN=CC=C2"
+      "C1C2CNCC1C3=CC=CC(=O)N3C2"
+    }
+    ?wd sachem:substructureSearch [
+          sachem:query      ?smiles ;
+          sachem:searchMode sachem:exactSearch ] .
+    SERVICE <https://query.wikidata.org/sparql> {
+      ?wd    wdt:P703  ?taxon .
+      OPTIONAL { ?wd rdfs:label ?compoundLabel . FILTER(LANG(?compoundLabel) = "en") }
+    }
+  }
+}
+GROUP BY ?wd
+ORDER BY DESC(?taxonCount)""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

@@ -1,0 +1,33 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0300201 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which PubChem compounds, together with their preferred names, are involved in the Rhea reaction catalysed by hexokinase (RHEA:17825, ATP + D-glucose = ADP + D-glucose 6-phosphate + H+)?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rh: <http://rdf.rhea-db.org/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT DISTINCT ?compound ?label
+WHERE {
+  SERVICE <https://sparql.rhea-db.org/sparql> {
+    VALUES ?rhea { rh:17825 }
+
+    ?rhea rdfs:subClassOf rh:Reaction .
+    ?rhea rh:equation ?equation .
+    ?rhea rh:side/rh:contains/rh:compound ?cmpd .
+
+    ?cmpd (rh:chebi|(rh:reactivePart/rh:chebi)|(rh:underlyingChebi/rh:chebi)) ?chebi .
+  }
+
+  GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
+    ?compound a ?chebi .
+    OPTIONAL { ?compound skos:prefLabel ?label . }
+  }
+}""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

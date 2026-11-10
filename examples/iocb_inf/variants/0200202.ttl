@@ -1,0 +1,81 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0200202 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which SPARQL query languages and service features do the UniProt, Rhea and IDSM endpoints declare, and how many named graphs does each of them expose?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql>,
+        <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+# WHAT CAN EACH SPARQL ENDPOINT DO?
+#
+# Before writing a federated query it helps to know what each server
+# promises. Every endpoint publishes a sd:Service description next to its
+# VoID: the query languages it speaks (sd:supportedLanguage), the optional
+# features it implements (sd:feature - e.g. BasicFederatedQuery, needed for
+# SERVICE, or UnionDefaultGraph) and the named graphs it makes available
+# (sd:availableGraphs / sd:namedGraph). One row per endpoint compares them.
+
+SELECT ?database ?endpoint
+       (GROUP_CONCAT(DISTINCT STR(?queryLanguage);     separator=", ") AS ?queryLanguages)
+       (GROUP_CONCAT(DISTINCT STR(?federationFeature); separator=", ") AS ?features)
+       (COUNT(DISTINCT ?graphName) AS ?nNamedGraphs)
+WHERE {
+  {
+    # (A) UNIPROT, self-described in its own VoID graph.
+    GRAPH <https://sparql.uniprot.org/.well-known/void> {
+      ?service a sd:Service ;
+               sd:endpoint          ?endpoint ;
+               sd:supportedLanguage ?queryLanguage .
+      OPTIONAL { ?service sd:feature ?federationFeature }
+      OPTIONAL { ?service sd:availableGraphs/sd:namedGraph/sd:name ?graphName }
+    }
+    BIND("UniProt" AS ?database)
+  }
+  UNION
+  {
+    # (B) RHEA, read from Rhea's own service description over federation.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+        ?service a sd:Service ;
+                 sd:endpoint          ?endpoint ;
+                 sd:supportedLanguage ?queryLanguage .
+        OPTIONAL { ?service sd:feature ?federationFeature }
+        OPTIONAL { ?service sd:availableGraphs/sd:namedGraph/sd:name ?graphName }
+      }
+    }
+    BIND("Rhea" AS ?database)
+  }
+  UNION
+  {
+    # (C) IDSM (local host of PubChem, ChEBI, ChEMBL, MeSH, ...), read from
+    #     IDSM's own VoID graph.
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+      SELECT ?endpoint ?queryLanguage ?federationFeature ?graphName
+      WHERE {
+        GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+          ?service a sd:Service ;
+                   sd:endpoint          ?endpoint ;
+                   sd:supportedLanguage ?queryLanguage ;
+                   sd:availableGraphs   ?graphCollection ;
+                   sd:feature           ?federationFeature .
+          ?graphCollection sd:namedGraph ?ng .
+          ?ng sd:name ?graphName .
+        }
+      }
+    }
+    BIND("IDSM" AS ?database)
+  }
+}
+GROUP BY ?database ?endpoint
+ORDER BY DESC(?nNamedGraphs) ?database
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

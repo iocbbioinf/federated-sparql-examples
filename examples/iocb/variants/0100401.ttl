@@ -1,0 +1,46 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0100401 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which experimentally determined structures of the human serotonin 5-HT2A, 5-HT2C and dopamine D2 receptors have a resolution of 3.0 Å or better, and which PubChem compounds are bound in them?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX up:      <http://purl.uniprot.org/core/>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX pdbo:    <http://rdf.wwpdb.org/schema/pdbx-v50.owl#>
+PREFIX cheminf: <http://semanticscience.org/resource/>
+
+SELECT ?ac ?mnemonic ?name ?pdbid ?method ?resolution ?compound
+WHERE {
+  # aminergic GPCR structures and their metadata from UniProt
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    VALUES ?protein {
+      <http://purl.uniprot.org/uniprot/P28223>   # 5-HT2A
+      <http://purl.uniprot.org/uniprot/P28335>   # 5-HT2C
+      <http://purl.uniprot.org/uniprot/P14416>   # dopamine D2
+    }
+    ?protein up:mnemonic ?mnemonic ; rdfs:seeAlso ?pdb .
+    OPTIONAL { ?protein up:recommendedName/up:fullName ?name }
+    ?pdb up:database <http://purl.uniprot.org/database/PDB> ;
+         up:method ?method .
+    # high-resolution entries only (3.0 A or better)
+    ?pdb up:resolution ?resolution .
+    FILTER(?resolution <= 3.0)
+    BIND(STRAFTER(STR(?protein),"uniprot/") AS ?ac)
+    BIND(STRAFTER(STR(?pdb),"pdb/")        AS ?pdbid)
+  }
+
+  # ligands deposited in the same PDB entries, as PubChem compounds
+  OPTIONAL {
+    GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/substance> {
+      ?substance pdbo:link_to_pdb ?pdb ;
+                 cheminf:CHEMINF_000477 ?compound .
+    }
+  }
+}
+ORDER BY ?mnemonic ?pdbid ?compound""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

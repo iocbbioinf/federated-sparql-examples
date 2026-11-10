@@ -1,0 +1,35 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0600501 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which taxa produce the purine alkaloids caffeine, theobromine or theophylline?"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/wikidata> ;
+    spex:federatesWith <https://query.wikidata.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sachem:  <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+
+SELECT DISTINCT ?wd ?taxonName ?smiles ?compoundLabel WHERE {
+  SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/wikidata> {
+    VALUES ?smiles {
+      "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+      "CN1C=NC2=C1C(=O)NC(=O)N2C"
+      "CN1C2=C(C(=O)N(C1=O)C)NC=N2"
+    }
+    ?wd sachem:substructureSearch [
+          sachem:query      ?smiles ;
+          sachem:searchMode sachem:exactSearch ] .
+    SERVICE <https://query.wikidata.org/sparql> {
+      ?wd    wdt:P703  ?taxon .
+      ?taxon rdfs:label ?taxonName .
+      FILTER(LANG(?taxonName) = "en")
+      OPTIONAL { ?wd rdfs:label ?compoundLabel . FILTER(LANG(?compoundLabel) = "en") }
+    }
+  }
+}""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

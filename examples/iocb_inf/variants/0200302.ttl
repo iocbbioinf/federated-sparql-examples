@@ -1,0 +1,64 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0200302 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Which result serialisation formats are supported by the UniProt, Rhea and IDSM SPARQL endpoints, and which of them can be requested from all three endpoints?"@en ;
+    spex:federatesWith <https://sparql.rhea-db.org/sparql>,
+        <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX sd:      <http://www.w3.org/ns/sparql-service-description#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+
+# WHICH RESULT FORMATS CAN I RELY ON ACROSS THE FEDERATION?
+#
+# sd:resultFormat lists, per endpoint, the media types it can return. Each
+# value is a URI in the W3C formats registry (http://www.w3.org/ns/formats/
+# ...), so the format URI is also the pointer to that format's own
+# specification. Grouping by format and counting the endpoints that declare
+# it shows which formats a client can use everywhere (nEndpoints = 3) and
+# which are specific to one server.
+
+SELECT ?format
+       (COUNT(DISTINCT ?database) AS ?nEndpoints)
+       (GROUP_CONCAT(DISTINCT ?database; separator=", ") AS ?supportedBy)
+       (IF(COUNT(DISTINCT ?database) = 3, "yes", "no") AS ?supportedEverywhere)
+       (SAMPLE(?format) AS ?documentation)
+WHERE {
+  {
+    # (A) UNIPROT: the formats its SPARQL endpoint serves.
+    GRAPH <https://sparql.uniprot.org/.well-known/void> {
+      ?service a sd:Service ; sd:resultFormat ?format .
+    }
+    BIND("UniProt" AS ?database)
+  }
+  UNION
+  {
+    # (B) RHEA: same question, answered by Rhea's own service description.
+    SERVICE <https://sparql.rhea-db.org/sparql> {
+      GRAPH <https://sparql.rhea-db.org/.well-known/void> {
+        ?service a sd:Service ; sd:resultFormat ?format .
+      }
+    }
+    BIND("Rhea" AS ?database)
+  }
+  UNION
+  {
+    # (C) IDSM: the formats in which its PubChem, ChEMBL, ... data can be
+    #     retrieved, from IDSM's own service description.
+    SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
+      GRAPH <https://idsm.elixir-czech.cz/.well-known/void> {
+        ?service a sd:Service ; sd:resultFormat ?format .
+      }
+    }
+    BIND("IDSM" AS ?database)
+  }
+}
+GROUP BY ?format
+ORDER BY DESC(?nEndpoints) ?format
+""" ;
+    schema:target <https://sparql.uniprot.org/sparql> .

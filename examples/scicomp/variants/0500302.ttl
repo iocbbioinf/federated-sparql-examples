@@ -1,0 +1,53 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0500302 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "For loratadine (ChEMBL998), how many activity measurements are reported against each reviewed UniProt target protein, and how many distinct assays do they come from?"@en ;
+    spex:federatesWith <https://sparql.uniprot.org/sparql> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
+PREFIX chembl_molecule: <http://rdf.ebi.ac.uk/resource/chembl/molecule/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX up: <http://purl.uniprot.org/core/>
+
+SELECT DISTINCT
+       ?protein
+       ?proteinName
+       ?activityCount
+       ?assayCount
+WHERE {
+
+  {
+    SELECT ?protein
+           (COUNT(DISTINCT ?activity) AS ?activityCount)
+           (COUNT(DISTINCT ?assay) AS ?assayCount)
+    WHERE {
+      ?activity a cco:Activity ;
+          cco:hasMolecule chembl_molecule:CHEMBL998 ;
+          cco:hasAssay ?assay .
+
+      ?assay cco:hasTarget ?target .
+
+      ?target
+          cco:hasTargetComponent/
+          cco:targetCmptXref ?protein .
+
+      FILTER(STRSTARTS(STR(?protein), "http://purl.uniprot.org/uniprot/"))
+    }
+    GROUP BY ?protein
+  }
+
+  SERVICE <https://sparql.uniprot.org/sparql> {
+    SELECT ?protein ?proteinName WHERE {
+      ?protein a up:Protein ;
+               up:reviewed true ;
+               up:recommendedName/up:fullName ?proteinName .
+    }
+  }
+}
+ORDER BY DESC(?activityCount)""" ;
+    schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

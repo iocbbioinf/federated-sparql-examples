@@ -1,0 +1,31 @@
+@prefix ex: <https://idsm.elixir-czech.cz/.well-known/federated-sparql-examples/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spex: <https://purl.expasy.org/sparql-examples/ontology#> .
+
+ex:0400101 a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Retrieve the Rhea biochemical reactions that involve estrogens or other compounds containing the estrane skeleton with an aromatic A ring"@en ;
+    spex:federatesWith <https://idsm.elixir-czech.cz/sparql/endpoint/chebi> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
+PREFIX endpoint: <https://idsm.elixir-czech.cz/sparql/endpoint/>
+PREFIX up:<http://purl.uniprot.org/core/>
+PREFIX rh:<http://rdf.rhea-db.org/>
+PREFIX ch:<http://purl.obolibrary.org/obo/>
+
+SELECT DISTINCT ?CHEBI ?CHEBI_UNIPROT_NAME ?RHEA_REACTION ?RHEA_REACTION_EQUATION WHERE {
+  SERVICE endpoint:chebi {
+    ?CHEBI sachem:substructureSearch [
+        sachem:query "c1cc2CCC3C4CCCC4CCC3c2cc1" ].
+  }
+
+  ?RHEA_REACTION rdfs:subClassOf rh:Reaction.
+  ?RHEA_REACTION rh:status rh:Approved.
+  ?RHEA_REACTION rh:equation ?RHEA_REACTION_EQUATION.
+  ?RHEA_REACTION rh:side / rh:contains / rh:compound / rh:chebi ?CHEBI.
+  ?CHEBI up:name ?CHEBI_UNIPROT_NAME.
+}""" ;
+    schema:target <https://sparql.rhea-db.org/sparql> .
