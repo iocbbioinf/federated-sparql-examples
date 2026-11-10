@@ -17,7 +17,7 @@ PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
 SELECT ?compound ?score ?label WHERE {
 
   {
-    SELECT ?compound ?score ?wdid WHERE {
+    SELECT * WHERE {
       SERVICE <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> {
         [ sachem:compound ?compound ; sachem:score ?score ]
             sachem:similaritySearch [
@@ -26,14 +26,13 @@ SELECT ?compound ?score ?label WHERE {
         GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
           ?compound rdfs:seeAlso ?wdid .
         }
-        FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
+        FILTER(CONTAINS(STR(?wdid), "http://www.wikidata.org/entity/"))
+        SERVICE <https://query.wikidata.org/sparql> {
+          ?wdid rdfs:label ?label .
+          FILTER(LANG(?label) = "en")
+        }
       }
     }
-  }
-
-  SERVICE <https://query.wikidata.org/sparql> {
-    ?wdid rdfs:label ?label .
-    FILTER(LANG(?label) = "en")
   }
 }""" ;
     schema:target <https://sparql.uniprot.org/sparql> .

@@ -13,11 +13,11 @@ ex:040 a sh:SPARQLExecutable,
     sh:select """PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX sachem:  <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
 PREFIX endpoint:<https://idsm.elixir-czech.cz/sparql/endpoint/>
-PREFIX wdt:     <http://www.wikidata.org/prop/direct/>
+PREFIX wdt:     <http:w.wikidata.org/prop/direct/>
 
 SELECT DISTINCT ?wd ?taxonName ?smiles ?compoundLabel WHERE {
   {
-    SELECT ?wd ?smiles WHERE {
+    SELECT * WHERE {
       SERVICE endpoint:wikidata {
         VALUES ?smiles {
           "C=C(CC/C=C(C)CC/C=C(C)CCC=C(C)C)[C@@H]1CC=C(C)CC1"
@@ -81,14 +81,14 @@ SELECT DISTINCT ?wd ?taxonName ?smiles ?compoundLabel WHERE {
         ?wd sachem:substructureSearch [
               sachem:query      ?smiles ;
               sachem:searchMode sachem:exactSearch ] .
+        SERVICE <https://query.wikidata.org/sparql> {
+          ?wd    wdt:P703  ?taxon .
+          ?taxon rdfs:label ?taxonName .
+          FILTER(LANG(?taxonName) = "en")
+          OPTIONAL { ?wd rdfs:label ?compoundLabel . FILTER(LANG(?compoundLabel) = "en") }
+        }
       }
     }
-  }
-  SERVICE <https://query.wikidata.org/sparql> {
-    ?wd    wdt:P703  ?taxon .
-    ?taxon rdfs:label ?taxonName .
-    FILTER(LANG(?taxonName) = "en")
-    OPTIONAL { ?wd rdfs:label ?compoundLabel . FILTER(LANG(?compoundLabel) = "en") }
   }
 }""" ;
     schema:target <https://sparql.uniprot.org/sparql> .

@@ -18,19 +18,20 @@ PREFIX obo:     <http://purl.obolibrary.org/obo/>
 PREFIX chemrof: <https://w3id.org/chemrof/>
 PREFIX rh: <http://rdf.rhea-db.org/>
 
-SELECT ?chebi ?protein WHERE {
+SELECT DISTINCT ?chebi ?protein WHERE {
   
   ?chebi oboInOwl:hasRelatedSynonym ?o .
   ?chebi chemrof:smiles_string ?smiles
   FILTER(LCASE(STR(?o)) = "magnesium(2+)")
   
      SERVICE <https://sparql.uniprot.org/sparql> {
-    SELECT ?protein WHERE {
+    SELECT ?chebi ?protein WHERE {
       ?protein up:annotation ?ann ;
                up:reviewed   true .              
       ?ann a up:Cofactor_Annotation ;
            up:cofactor ?chebi .         
-    } LIMIT 100
+    }
   }
- }""" ;
+ }
+LIMIT 100""" ;
     schema:target <https://idsm.elixir-czech.cz/sparql/endpoint/idsm> .

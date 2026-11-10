@@ -31,10 +31,10 @@ WHERE {
         GRAPH <http://rdf.ncbi.nlm.nih.gov/pubchem/compound> {
           ?compound rdfs:seeAlso ?wdid .
         }
-        FILTER(STRSTARTS(STR(?wdid), "http://www.wikidata.org/entity/"))
-      }
-      SERVICE <https://query.wikidata.org/sparql> {
-        ?wdid wdt:P2067 ?mass .
+        FILTER(CONTAINS(STR(?wdid), "http://www.wikidata.org/entity/"))
+        SERVICE <https://query.wikidata.org/sparql> {
+          ?wdid wdt:P2067 ?mass .
+        }
       }
     }
     GROUP BY ?compound
